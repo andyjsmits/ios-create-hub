@@ -3,6 +3,7 @@ import { HabitCard } from "@/components/HabitCard";
 import { OverviewStats } from "@/components/OverviewStats";
 import { Badge } from "@/components/ui/badge";
 import { Book, Heart, Users, HandHeart, Church } from "lucide-react";
+import p2cLogo from "@/assets/p2c-students-logos.png";
 
 const Index = () => {
   // Initialize habit data for the 5 missional faith formation areas
@@ -20,35 +21,35 @@ const Index = () => {
       description: "Daily connection with God",
       icon: <Church className="h-6 w-6 text-primary" />,
       habits: ["Morning Prayer (15 min)", "Evening Prayer", "Meditation/Quiet Time"],
-      gradient: "var(--gradient-hero)"
+      gradient: "var(--gradient-yellow)"
     },
     scripture: {
       title: "Scripture Study",
       description: "Growing in God's Word",
       icon: <Book className="h-6 w-6 text-primary" />,
       habits: ["Daily Bible Reading", "Scripture Reflection"],
-      gradient: "var(--gradient-card)"
+      gradient: "var(--gradient-blue)"
     },
     community: {
       title: "Christian Community",
       description: "Building relationships in Christ",
       icon: <Users className="h-6 w-6 text-primary" />,
       habits: ["Fellowship Connection", "Encourage Someone"],
-      gradient: "var(--gradient-accent)"
+      gradient: "var(--gradient-purple)"
     },
     service: {
       title: "Missional Living",
       description: "Serving others as Christ served",
       icon: <HandHeart className="h-6 w-6 text-primary" />,
       habits: ["Act of Kindness", "Volunteer/Serve", "Share Faith"],
-      gradient: "var(--gradient-hero)"
+      gradient: "var(--gradient-blue)"
     },
     worship: {
       title: "Worship & Gratitude",
       description: "Cultivating a heart of praise",
       icon: <Heart className="h-6 w-6 text-primary" />,
       habits: ["Gratitude Practice", "Worship/Praise"],
-      gradient: "var(--gradient-card)"
+      gradient: "var(--gradient-yellow)"
     }
   };
 
@@ -69,33 +70,24 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Bold Hero Header */}
+      {/* P2C Students Hero */}
       <div className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
-        {/* Animated background elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl animate-pulse"></div>
-          <div className="absolute top-32 right-20 w-24 h-24 bg-white/20 rounded-full blur-lg animate-bounce"></div>
-          <div className="absolute bottom-20 left-1/4 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
-        </div>
-        
-        <div className="relative container mx-auto px-6 py-20 text-center text-white">
+        <div className="relative container mx-auto px-6 py-16 text-center text-white">
           <div className="mb-8">
             <div className="inline-flex items-center gap-4 mb-6">
-              <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 shadow-2xl" style={{ boxShadow: 'var(--glow-primary)' }}>
-                <Church className="h-10 w-10" />
-              </div>
+              <img src={p2cLogo} alt="P2C Students" className="h-16 w-auto filter brightness-0 invert" />
             </div>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-black mb-6 leading-tight tracking-tight">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-black mb-6 leading-tight tracking-tight">
               FAITH
-              <span className="block bg-gradient-to-r from-white via-yellow-200 to-white bg-clip-text text-transparent">
-                HABITS
+              <span className="block text-3xl md:text-4xl lg:text-5xl font-bold opacity-90">
+                FORMATION HABITS
               </span>
             </h1>
             <p className="text-xl md:text-2xl font-medium max-w-3xl mx-auto leading-relaxed mb-8">
-              Level up your spiritual journey with these 5 core habits that transform lives
+              Helping you take your next step towards Jesus through daily habits
             </p>
-            <div className="inline-flex items-center gap-3 px-8 py-4 bg-black/30 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl">
-              <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+            <div className="inline-flex items-center gap-3 px-8 py-4 bg-black/20 backdrop-blur-md rounded-2xl border border-white/20">
+              <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
               <span className="text-lg font-semibold">
                 {new Date().toLocaleDateString('en-US', { 
                   weekday: 'long', 
@@ -135,21 +127,24 @@ const Index = () => {
           ))}
         </div>
 
-        {/* Bold Call to Action */}
+        {/* P2C-style Call to Action */}
         <div className="text-center">
-          <div className="max-w-4xl mx-auto p-10 rounded-3xl border-2 border-primary/30 relative overflow-hidden" style={{ background: 'var(--gradient-card)' }}>
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 animate-pulse"></div>
-            <div className="relative">
-              <blockquote className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6 leading-tight">
-                "STAND FIRM. LET NOTHING MOVE YOU."
+          <div className="max-w-4xl mx-auto p-10 rounded-2xl border border-border shadow-lg bg-card">
+            <div className="mb-6">
+              <blockquote className="text-2xl md:text-3xl font-display font-bold text-foreground mb-4 leading-tight">
+                "Stand firm. Let nothing move you."
               </blockquote>
-              <cite className="text-xl font-semibold" style={{ color: 'hsl(var(--primary))' }}>
-                1 CORINTHIANS 15:58
+              <cite className="text-lg font-semibold text-primary">
+                1 Corinthians 15:58
               </cite>
-              <p className="mt-6 text-lg font-medium text-muted-foreground">
-                Every habit completed is a step forward in your faith journey. 
-                <span className="block mt-2 font-bold text-foreground">Keep pushing. Keep growing. Keep believing.</span>
-              </p>
+            </div>
+            <p className="text-lg font-medium text-muted-foreground">
+              Every habit completed is a step forward in your faith journey.
+            </p>
+            <div className="mt-6 inline-flex items-center gap-3">
+              <div className="h-1 w-12 bg-primary rounded-full"></div>
+              <span className="text-sm font-bold text-primary uppercase tracking-wide">P2C Students</span>
+              <div className="h-1 w-12 bg-primary rounded-full"></div>
             </div>
           </div>
         </div>
