@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, MessageCircle } from "lucide-react";
+import { Trash2, Plus, MessageCircle, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { notificationService } from "@/services/notificationService";
 
 interface PrayerPerson {
   id: string;
   name: string;
   cadence: 'daily' | 'weekly';
+  notificationTime?: string; // Format: "HH:MM"
 }
 
 interface PrayerManagerProps {
@@ -23,9 +25,35 @@ interface PrayerManagerProps {
 export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: PrayerManagerProps) => {
   const [newPersonName, setNewPersonName] = useState("");
   const [newPersonCadence, setNewPersonCadence] = useState<'daily' | 'weekly'>('daily');
+  const [newPersonTime, setNewPersonTime] = useState("09:00");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const { toast } = useToast();
 
-  const addPerson = () => {
+  useEffect(() => {
+    // Check and request notification permissions on component mount
+    const setupNotifications = async () => {
+      const hasPermission = await notificationService.requestPermissions();
+      setNotificationsEnabled(hasPermission);
+      
+      if (hasPermission) {
+        await notificationService.setupPushNotifications();
+        toast({
+          title: "Notifications enabled",
+          description: "You'll receive prayer reminders based on your schedule."
+        });
+      } else {
+        toast({
+          title: "Notifications disabled", 
+          description: "Enable notifications in your device settings to receive prayer reminders.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    setupNotifications();
+  }, [toast]);
+
+  const addPerson = async () => {
     if (!newPersonName.trim()) {
       toast({
         title: "Name required",
@@ -47,12 +75,20 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     const newPerson: PrayerPerson = {
       id: Date.now().toString(),
       name: newPersonName.trim(),
-      cadence: newPersonCadence
+      cadence: newPersonCadence,
+      notificationTime: newPersonTime
     };
 
     onUpdatePrayerList([...prayerList, newPerson]);
+    
+    // Schedule notification if enabled
+    if (notificationsEnabled) {
+      await scheduleNotificationForPerson(newPerson);
+    }
+    
     setNewPersonName("");
     setNewPersonCadence('daily');
+    setNewPersonTime("09:00");
     
     toast({
       title: "Person added",
@@ -72,12 +108,43 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     }
   };
 
-  const updateCadence = (id: string, cadence: 'daily' | 'weekly') => {
-    onUpdatePrayerList(
-      prayerList.map(person => 
-        person.id === id ? { ...person, cadence } : person
-      )
+  const updateCadence = async (id: string, cadence: 'daily' | 'weekly') => {
+    const updatedList = prayerList.map(person => 
+      person.id === id ? { ...person, cadence } : person
     );
+    onUpdatePrayerList(updatedList);
+    
+    // Reschedule notification with new cadence
+    if (notificationsEnabled) {
+      const person = updatedList.find(p => p.id === id);
+      if (person) {
+        await scheduleNotificationForPerson(person);
+      }
+    }
+  };
+
+  const scheduleNotificationForPerson = async (person: PrayerPerson) => {
+    if (!person.notificationTime) return;
+
+    const [hours, minutes] = person.notificationTime.split(':').map(Number);
+    const now = new Date();
+    const notificationDate = new Date();
+    notificationDate.setHours(hours, minutes, 0, 0);
+
+    // If the time has passed today, schedule for tomorrow (daily) or next week (weekly)
+    if (notificationDate <= now) {
+      if (person.cadence === 'daily') {
+        notificationDate.setDate(notificationDate.getDate() + 1);
+      } else {
+        notificationDate.setDate(notificationDate.getDate() + 7);
+      }
+    }
+
+    try {
+      await notificationService.schedulePrayerReminder(person.name, notificationDate);
+    } catch (error) {
+      console.error('Error scheduling notification:', error);
+    }
   };
 
   return (
@@ -108,7 +175,7 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
+            <div>
               <Label htmlFor="person-name">Name</Label>
               <Input
                 id="person-name"
@@ -130,7 +197,27 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label htmlFor="reminder-time">Reminder Time</Label>
+              <Input
+                id="reminder-time"
+                type="time"
+                value={newPersonTime}
+                onChange={(e) => setNewPersonTime(e.target.value)}
+              />
+            </div>
           </div>
+          
+          {!notificationsEnabled && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-amber-800">
+                <Clock className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  Enable notifications in your device settings to receive prayer reminders
+                </span>
+              </div>
+            </div>
+          )}
           
           <Button 
             onClick={addPerson} 
@@ -164,6 +251,12 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
                         <Badge variant={person.cadence === 'daily' ? 'default' : 'secondary'}>
                           {person.cadence === 'daily' ? 'Daily' : 'Weekly'} reminders
                         </Badge>
+                        {person.notificationTime && (
+                          <Badge variant="outline">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {person.notificationTime}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -17,7 +17,7 @@ const Index = () => {
   const [habitData, setHabitData] = useState({
     pray: { 
       completed: false, 
-      prayerList: [] as Array<{id: string, name: string, cadence: 'daily' | 'weekly'}>, 
+      prayerList: [] as Array<{id: string, name: string, cadence: 'daily' | 'weekly', notificationTime?: string}>, 
       reminderTime: null 
     },
     union: { completed: false, resources: [] },
@@ -124,7 +124,7 @@ const Index = () => {
     setShowPrayerManager(true);
   };
 
-  const updatePrayerList = (prayerList: Array<{id: string, name: string, cadence: 'daily' | 'weekly'}>) => {
+  const updatePrayerList = (prayerList: Array<{id: string, name: string, cadence: 'daily' | 'weekly', notificationTime?: string}>) => {
     setHabitData(prev => ({
       ...prev,
       pray: { ...prev.pray, prayerList }
