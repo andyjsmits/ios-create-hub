@@ -11,6 +11,15 @@ const Index = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
+  // Initialize PULSE habit data - MUST be before any conditional returns
+  const [habitData, setHabitData] = useState({
+    pray: { completed: false, prayerList: [], reminderTime: null },
+    union: { completed: false, resources: [] },
+    listen: { weeklyQuestions: [], completed: false },
+    serve: { weeklyService: [], completed: false },
+    echo: { completed: false, testimonies: [] }
+  });
+
   useEffect(() => {
     if (!loading && !user) {
       navigate("/auth");
@@ -31,15 +40,6 @@ const Index = () => {
   if (!user) {
     return null;
   }
-
-  // Initialize PULSE habit data
-  const [habitData, setHabitData] = useState({
-    pray: { completed: false, prayerList: [], reminderTime: null },
-    union: { completed: false, resources: [] },
-    listen: { weeklyQuestions: [], completed: false },
-    serve: { weeklyService: [], completed: false },
-    echo: { completed: false, testimonies: [] }
-  });
 
   const pulseHabits = {
     pray: {
