@@ -1,11 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { HabitCard } from "@/components/HabitCard";
 import { OverviewStats } from "@/components/OverviewStats";
-import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Book, Ear, HandHeart, Volume2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { MessageCircle, Book, Ear, HandHeart, Volume2, LogOut } from "lucide-react";
 import p2cLogo from "@/assets/p2c-students-logos.png";
 
 const Index = () => {
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/auth");
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   // Initialize PULSE habit data
   const [habitData, setHabitData] = useState({
     pray: { completed: false, prayerList: [], reminderTime: null },
@@ -76,6 +102,17 @@ const Index = () => {
       {/* P2C Students Hero */}
       <div className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
         <div className="relative container mx-auto px-6 py-16 text-center text-white">
+          <div className="absolute top-6 right-6">
+            <Button 
+              onClick={signOut}
+              variant="outline" 
+              size="sm"
+              className="text-white border-white/20 hover:bg-white/10"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
           <div className="mb-8">
             <div className="inline-flex items-center gap-4 mb-6">
               <img src={p2cLogo} alt="P2C Students" className="h-16 w-auto filter brightness-0 invert" />
