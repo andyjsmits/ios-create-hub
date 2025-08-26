@@ -109,6 +109,17 @@ const Index = () => {
     }));
   };
 
+  const handleHabitNavigation = (habitKey: string) => {
+    const routes = {
+      pray: '/habits/pray',
+      union: '/habits/union', 
+      listen: '/habits/listen',
+      serve: '/habits/serve',
+      echo: '/habits/echo'
+    };
+    navigate(routes[habitKey as keyof typeof routes]);
+  };
+
   const handlePrayerAction = () => {
     setShowPrayerManager(true);
   };
@@ -194,6 +205,7 @@ const Index = () => {
               onAction={key === 'pray' ? handlePrayerAction : undefined}
               actionLabel={key === 'pray' ? 'Manage Prayer List' : undefined}
               actionIcon={key === 'pray' ? <Settings className="h-4 w-4" /> : undefined}
+              onNavigate={() => handleHabitNavigation(key)}
               gradient={habitConfig.gradient}
               details={habitConfig.details}
             />

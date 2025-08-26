@@ -15,6 +15,7 @@ interface HabitCardProps {
   onAction?: () => void;
   actionLabel?: string;
   actionIcon?: React.ReactNode;
+  onNavigate?: () => void;
 }
 
 export const HabitCard = ({ 
@@ -28,7 +29,8 @@ export const HabitCard = ({
   details,
   onAction,
   actionLabel,
-  actionIcon
+  actionIcon,
+  onNavigate
 }: HabitCardProps) => {
   const getActionText = () => {
     switch (type) {
@@ -53,7 +55,8 @@ export const HabitCard = ({
   };
   
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 overflow-hidden relative border border-border shadow-md bg-card">
+    <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 overflow-hidden relative border border-border shadow-md bg-card cursor-pointer"
+          onClick={onNavigate}>
       <CardHeader className="relative pb-4">
         <div className="flex items-start gap-4">
           <div className="p-4 rounded-xl shadow-sm" style={{ background: gradient }}>
@@ -76,7 +79,10 @@ export const HabitCard = ({
         
         <div className="space-y-3">
           <Button
-            onClick={onToggle}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}
             variant={completed ? "default" : "outline"}
             className={`w-full h-12 rounded-lg transition-all duration-300 font-semibold ${
               completed 
@@ -95,7 +101,10 @@ export const HabitCard = ({
             <Button
               variant="ghost"
               className="w-full h-10 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              onClick={onAction}
+              onClick={(e) => {
+                e.stopPropagation();
+                onAction?.();
+              }}
             >
               {actionIcon && <span className="mr-2">{actionIcon}</span>}
               {actionLabel || getSecondaryAction()}
