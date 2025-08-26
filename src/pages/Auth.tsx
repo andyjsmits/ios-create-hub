@@ -92,7 +92,15 @@ const Auth = () => {
         {/* Header */}
         <div className="text-center">
           <div className="inline-flex items-center gap-3 mb-6">
-            <img src={p2cLogo} alt="P2C Students" className="h-12 w-auto" />
+            <img 
+              src={p2cLogo} 
+              alt="P2C Students" 
+              className="h-12 w-auto"
+              onError={(e) => {
+                console.error('Image failed to load:', e);
+                e.currentTarget.style.display = 'none';
+              }}
+            />
             <MessageCircle className="h-8 w-8 text-primary" />
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Welcome to PULSE</h1>
