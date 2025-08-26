@@ -12,6 +12,9 @@ interface HabitCardProps {
   onToggle: () => void;
   gradient: string;
   details: string;
+  onAction?: () => void;
+  actionLabel?: string;
+  actionIcon?: React.ReactNode;
 }
 
 export const HabitCard = ({ 
@@ -22,7 +25,10 @@ export const HabitCard = ({
   completed, 
   onToggle,
   gradient,
-  details 
+  details,
+  onAction,
+  actionLabel,
+  actionIcon
 }: HabitCardProps) => {
   const getActionText = () => {
     switch (type) {
@@ -85,12 +91,14 @@ export const HabitCard = ({
             )}
           </Button>
           
-          {getSecondaryAction() && (
+          {(getSecondaryAction() || onAction) && (
             <Button
               variant="ghost"
               className="w-full h-10 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              onClick={onAction}
             >
-              {getSecondaryAction()}
+              {actionIcon && <span className="mr-2">{actionIcon}</span>}
+              {actionLabel || getSecondaryAction()}
             </Button>
           )}
         </div>

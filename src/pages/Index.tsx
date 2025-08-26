@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { HabitCard } from "@/components/HabitCard";
 import { OverviewStats } from "@/components/OverviewStats";
+import { PrayerManager } from "@/components/PrayerManager";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
-import { MessageCircle, Book, Ear, HandHeart, Volume2, LogOut } from "lucide-react";
+import { MessageCircle, Book, Ear, HandHeart, Volume2, LogOut, Settings } from "lucide-react";
 import p2cLogo from "@/assets/p2c-students-logos.png";
 
 const Index = () => {
@@ -13,12 +15,18 @@ const Index = () => {
 
   // Initialize PULSE habit data - MUST be before any conditional returns
   const [habitData, setHabitData] = useState({
-    pray: { completed: false, prayerList: [], reminderTime: null },
+    pray: { 
+      completed: false, 
+      prayerList: [] as Array<{id: string, name: string, cadence: 'daily' | 'weekly'}>, 
+      reminderTime: null 
+    },
     union: { completed: false, resources: [] },
     listen: { weeklyQuestions: [], completed: false },
     serve: { weeklyService: [], completed: false },
     echo: { completed: false, testimonies: [] }
   });
+
+  const [showPrayerManager, setShowPrayerManager] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -44,11 +52,13 @@ const Index = () => {
   const pulseHabits = {
     pray: {
       title: "Pray",
-      description: "Daily praying for people",
+      description: `Daily praying for people${habitData.pray.prayerList.length > 0 ? ` (${habitData.pray.prayerList.length} people)` : ''}`,
       icon: <MessageCircle className="h-6 w-6 text-white" />,
       type: "prayer" as const,
       gradient: "var(--gradient-yellow)",
-      details: "Maintain a prayer list and set daily reminders"
+      details: habitData.pray.prayerList.length > 0 
+        ? `Praying for: ${habitData.pray.prayerList.map(p => p.name).join(', ')}`
+        : "Set up your prayer list to get started"
     },
     union: {
       title: "Union",
@@ -85,9 +95,28 @@ const Index = () => {
   };
 
   const toggleHabit = (area: keyof typeof habitData) => {
+    if (area === 'pray') {
+      // If prayer list is empty, open prayer manager instead of toggling
+      if (habitData.pray.prayerList.length === 0) {
+        setShowPrayerManager(true);
+        return;
+      }
+    }
+    
     setHabitData(prev => ({
       ...prev,
       [area]: { ...prev[area], completed: !prev[area].completed }
+    }));
+  };
+
+  const handlePrayerAction = () => {
+    setShowPrayerManager(true);
+  };
+
+  const updatePrayerList = (prayerList: Array<{id: string, name: string, cadence: 'daily' | 'weekly'}>) => {
+    setHabitData(prev => ({
+      ...prev,
+      pray: { ...prev.pray, prayerList }
     }));
   };
 
@@ -162,6 +191,9 @@ const Index = () => {
               type={habitConfig.type}
               completed={habitData[key as keyof typeof habitData].completed}
               onToggle={() => toggleHabit(key as keyof typeof habitData)}
+              onAction={key === 'pray' ? handlePrayerAction : undefined}
+              actionLabel={key === 'pray' ? 'Manage Prayer List' : undefined}
+              actionIcon={key === 'pray' ? <Settings className="h-4 w-4" /> : undefined}
               gradient={habitConfig.gradient}
               details={habitConfig.details}
             />
@@ -190,6 +222,20 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* Prayer Manager Dialog */}
+      <Dialog open={showPrayerManager} onOpenChange={setShowPrayerManager}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Prayer Management</DialogTitle>
+          </DialogHeader>
+          <PrayerManager
+            prayerList={habitData.pray.prayerList}
+            onUpdatePrayerList={updatePrayerList}
+            onClose={() => setShowPrayerManager(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
