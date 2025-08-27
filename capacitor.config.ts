@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.1590c06423e54362a25c712d37cdea5f',
+  appId: 'app.lovable.pulse',
   appName: 'PULSE',
   webDir: 'dist',
   server: {
