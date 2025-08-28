@@ -149,7 +149,7 @@ const Index = () => {
               onClick={() => setShowNotificationsTest(true)}
               variant="outline" 
               size="sm"
-              className="text-white border-white/20 hover:bg-white/10"
+              className="text-white border-white/20 hover:bg-white/20 hover:text-foreground bg-white/10"
             >
               <TestTube className="h-4 w-4 mr-2" />
               Test Notifications
@@ -158,7 +158,7 @@ const Index = () => {
               onClick={signOut}
               variant="outline" 
               size="sm"
-              className="text-white border-white/20 hover:bg-white/10"
+              className="text-white border-white/20 hover:bg-white/20 hover:text-foreground bg-white/10"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
@@ -168,9 +168,9 @@ const Index = () => {
             <div className="inline-flex items-center gap-4 mb-6">
               <img src={p2cLogo} alt="P2C Students" className="h-16 w-auto filter brightness-0 invert" />
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-black mb-6 leading-tight tracking-tight">
-              <span className="text-8xl md:text-9xl font-black tracking-wider">PULSE</span>
-              <span className="block text-2xl md:text-3xl lg:text-4xl font-bold opacity-90 mt-4">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-black mb-6 leading-tight tracking-tight flex flex-col items-center">
+              <span className="text-8xl md:text-9xl font-black tracking-wider text-center">PULSE</span>
+              <span className="block text-2xl md:text-3xl lg:text-4xl font-bold opacity-90 mt-4 text-center">
                 MISSIONAL HABITS
               </span>
             </h1>
