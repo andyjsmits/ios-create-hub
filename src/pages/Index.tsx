@@ -7,28 +7,29 @@ import { NotificationsTest } from "@/components/NotificationsTest";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { useHabits, PrayerPerson } from "@/hooks/useHabits";
 import { MessageCircle, Book, Ear, HandHeart, Volume2, LogOut, Settings, TestTube } from "lucide-react";
 import p2cLogo from "@/assets/p2c-students-logos.png";
 
 const Index = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
+  const { habitData: prayHabitData, loading: prayLoading, updatePrayerList } = useHabits('pray');
 
-  // Initialize PULSE habit data - MUST be before any conditional returns
-  const [habitData, setHabitData] = useState({
-    pray: { 
-      completed: false, 
-      prayerList: [] as Array<{id: string, name: string, cadence: 'daily' | 'weekly', notificationTime?: string}>, 
-      reminderTime: null 
-    },
-    union: { completed: false, resources: [] },
-    listen: { weeklyQuestions: [], completed: false },
-    serve: { weeklyService: [], completed: false },
-    echo: { completed: false, testimonies: [] }
+  // Initialize local state for habits completion tracking
+  const [habitCompletions, setHabitCompletions] = useState({
+    pray: false,
+    union: false,
+    listen: false,
+    serve: false,
+    echo: false
   });
 
   const [showPrayerManager, setShowPrayerManager] = useState(false);
   const [showNotificationsTest, setShowNotificationsTest] = useState(false);
+
+  // Get prayer list from database or use empty array
+  const prayerList = prayHabitData.prayerList || [];
 
   useEffect(() => {
     if (!loading && !user) {
@@ -36,7 +37,7 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
-  if (loading) {
+  if (loading || prayLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -54,12 +55,12 @@ const Index = () => {
   const pulseHabits = {
     pray: {
       title: "Pray",
-      description: `Daily praying for people${habitData.pray.prayerList.length > 0 ? ` (${habitData.pray.prayerList.length} people)` : ''}`,
+      description: `Daily praying for people${prayerList.length > 0 ? ` (${prayerList.length} people)` : ''}`,
       icon: <MessageCircle className="h-6 w-6 text-white" />,
       type: "prayer" as const,
       gradient: "var(--gradient-yellow)",
-      details: habitData.pray.prayerList.length > 0 
-        ? `Praying for: ${habitData.pray.prayerList.map(p => p.name).join(', ')}`
+      details: prayerList.length > 0 
+        ? `Praying for: ${prayerList.map(p => p.name).join(', ')}`
         : "Set up your prayer list to get started"
     },
     union: {
@@ -96,18 +97,18 @@ const Index = () => {
     }
   };
 
-  const toggleHabit = (area: keyof typeof habitData) => {
+  const toggleHabit = (area: keyof typeof habitCompletions) => {
     if (area === 'pray') {
       // If prayer list is empty, open prayer manager instead of toggling
-      if (habitData.pray.prayerList.length === 0) {
+      if (prayerList.length === 0) {
         setShowPrayerManager(true);
         return;
       }
     }
     
-    setHabitData(prev => ({
+    setHabitCompletions(prev => ({
       ...prev,
-      [area]: { ...prev[area], completed: !prev[area].completed }
+      [area]: !prev[area]
     }));
   };
 
@@ -126,16 +127,13 @@ const Index = () => {
     setShowPrayerManager(true);
   };
 
-  const updatePrayerList = (prayerList: Array<{id: string, name: string, cadence: 'daily' | 'weekly', notificationTime?: string}>) => {
-    setHabitData(prev => ({
-      ...prev,
-      pray: { ...prev.pray, prayerList }
-    }));
+  const handleUpdatePrayerList = (newPrayerList: PrayerPerson[]) => {
+    updatePrayerList(newPrayerList);
   };
 
   // Calculate stats
   const totalHabits = Object.keys(pulseHabits).length;
-  const totalCompleted = Object.values(habitData).filter(habit => habit.completed).length;
+  const totalCompleted = Object.values(habitCompletions).filter(completed => completed).length;
   const streak = 7; // This would come from stored data
   const weeklyGoal = 5; // Complete all 5 PULSE habits
 
@@ -211,8 +209,8 @@ const Index = () => {
               description={habitConfig.description}
               icon={habitConfig.icon}
               type={habitConfig.type}
-              completed={habitData[key as keyof typeof habitData].completed}
-              onToggle={() => toggleHabit(key as keyof typeof habitData)}
+              completed={habitCompletions[key as keyof typeof habitCompletions]}
+              onToggle={() => toggleHabit(key as keyof typeof habitCompletions)}
               onAction={key === 'pray' ? handlePrayerAction : undefined}
               actionLabel={key === 'pray' ? 'Manage Prayer List' : undefined}
               actionIcon={key === 'pray' ? <Settings className="h-4 w-4" /> : undefined}
@@ -253,8 +251,8 @@ const Index = () => {
             <DialogTitle>Prayer Management</DialogTitle>
           </DialogHeader>
           <PrayerManager
-            prayerList={habitData.pray.prayerList}
-            onUpdatePrayerList={updatePrayerList}
+            prayerList={prayerList}
+            onUpdatePrayerList={handleUpdatePrayerList}
             onClose={() => setShowPrayerManager(false)}
           />
         </DialogContent>

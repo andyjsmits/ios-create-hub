@@ -44,6 +44,69 @@ export type Database = {
         }
         Relationships: []
       }
+      habits: {
+        Row: {
+          created_at: string
+          data: Json
+          habit_type: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          habit_type: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          habit_type?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prayer_notifications: {
+        Row: {
+          cadence: string
+          created_at: string
+          id: string
+          is_active: boolean
+          notification_id: number
+          notification_time: string
+          person_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cadence: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notification_id: number
+          notification_time: string
+          person_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cadence?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notification_id?: number
+          notification_time?: string
+          person_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

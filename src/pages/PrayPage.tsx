@@ -7,27 +7,41 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, MessageCircle, Plus, Trash2, ExternalLink, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useHabits, ResourceItem } from "@/hooks/useHabits";
+import { useAuth } from "@/hooks/useAuth";
 
 const PrayPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const [resources, setResources] = useState([
-    { id: '1', title: 'Prayer Guide', url: 'https://example.com', description: 'A comprehensive guide to prayer' },
-    { id: '2', title: 'Daily Prayer Schedule', url: 'https://example.com', description: 'Structured prayer times' }
-  ]);
+  const { user } = useAuth();
+  const { habitData, loading, updateResources } = useHabits('pray');
   
   const [newResource, setNewResource] = useState({ title: '', url: '', description: '' });
   
-  const [trackingHistory] = useState([
+  // Use data from database or fallback to defaults
+  const resources = habitData.resources || [
+    { id: '1', title: 'Prayer Guide', url: 'https://example.com', description: 'A comprehensive guide to prayer' },
+    { id: '2', title: 'Daily Prayer Schedule', url: 'https://example.com', description: 'Structured prayer times' }
+  ];
+  
+  const trackingHistory = habitData.trackingHistory || [
     { date: '2024-01-26', completed: true, notes: 'Prayed for John, Sarah, Mike' },
     { date: '2024-01-25', completed: true, notes: 'Morning prayer session' },
     { date: '2024-01-24', completed: false, notes: '' },
     { date: '2024-01-23', completed: true, notes: 'Prayer walk' },
     { date: '2024-01-22', completed: true, notes: 'Group prayer meeting' }
-  ]);
+  ];
 
   const addResource = () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to save resources.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!newResource.title || !newResource.url) {
       toast({
         title: "Missing information",
@@ -37,12 +51,12 @@ const PrayPage = () => {
       return;
     }
 
-    const resource = {
+    const resource: ResourceItem = {
       id: Date.now().toString(),
       ...newResource
     };
 
-    setResources([...resources, resource]);
+    updateResources([...resources, resource]);
     setNewResource({ title: '', url: '', description: '' });
     
     toast({
@@ -52,12 +66,23 @@ const PrayPage = () => {
   };
 
   const removeResource = (id: string) => {
-    setResources(resources.filter(r => r.id !== id));
+    updateResources(resources.filter(r => r.id !== id));
     toast({
       title: "Resource removed",
       description: "Prayer resource has been removed."
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading prayer data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
