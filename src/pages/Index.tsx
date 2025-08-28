@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { HabitCard } from "@/components/HabitCard";
 import { OverviewStats } from "@/components/OverviewStats";
 import { PrayerManager } from "@/components/PrayerManager";
+import { NotificationsTest } from "@/components/NotificationsTest";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
-import { MessageCircle, Book, Ear, HandHeart, Volume2, LogOut, Settings } from "lucide-react";
+import { MessageCircle, Book, Ear, HandHeart, Volume2, LogOut, Settings, TestTube } from "lucide-react";
 import p2cLogo from "@/assets/p2c-students-logos.png";
 
 const Index = () => {
@@ -27,6 +28,7 @@ const Index = () => {
   });
 
   const [showPrayerManager, setShowPrayerManager] = useState(false);
+  const [showNotificationsTest, setShowNotificationsTest] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -142,7 +144,16 @@ const Index = () => {
       {/* P2C Students Hero */}
       <div className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
         <div className="relative container mx-auto px-6 py-16 text-center text-white">
-          <div className="absolute top-6 right-6">
+          <div className="absolute top-6 right-6 flex gap-2">
+            <Button 
+              onClick={() => setShowNotificationsTest(true)}
+              variant="outline" 
+              size="sm"
+              className="text-white border-white/20 hover:bg-white/10"
+            >
+              <TestTube className="h-4 w-4 mr-2" />
+              Test Notifications
+            </Button>
             <Button 
               onClick={signOut}
               variant="outline" 
@@ -246,6 +257,13 @@ const Index = () => {
             onUpdatePrayerList={updatePrayerList}
             onClose={() => setShowPrayerManager(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Notifications Test Dialog */}
+      <Dialog open={showNotificationsTest} onOpenChange={setShowNotificationsTest}>
+        <DialogContent className="max-w-2xl">
+          <NotificationsTest />
         </DialogContent>
       </Dialog>
     </div>
