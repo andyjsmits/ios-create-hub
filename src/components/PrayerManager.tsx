@@ -148,7 +148,7 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
             Add Someone to Pray For
           </CardTitle>
           <p className="text-sm text-muted-foreground italic">
-            Feel free to use nicknames or just first names to keep things confidential.
+            Feel free to use nicknames or first names to keep things confidential.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
