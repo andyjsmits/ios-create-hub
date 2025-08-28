@@ -148,8 +148,13 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
               
               <div className="text-center p-4 rounded-lg bg-muted/50">
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <h3 className="font-semibold">Prayer List</h3>
-                <p className="text-sm text-muted-foreground">Pray for specific people</p>
+                <h3 className="font-semibold">My Prayer List</h3>
+                <p className="text-sm text-muted-foreground">
+                  {habitData.prayerList && habitData.prayerList.length > 0 
+                    ? habitData.prayerList.map(person => person.name).join(', ')
+                    : 'Add people to pray for'
+                  }
+                </p>
               </div>
               <div className="text-center p-4 rounded-lg bg-muted/50">
                 <Plus className="h-8 w-8 mx-auto mb-2 text-primary" />
