@@ -104,10 +104,14 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     try {
+      // Use app custom URL scheme for mobile, fallback to web URL for browser
+      const isNative = window.location.protocol === 'capacitor:';
+      const redirectTo = isNative ? 'app.smits.pulse://' : `${window.location.origin}/`;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`
+          redirectTo
         }
       });
 
