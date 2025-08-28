@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, MessageCircle, Plus, Trash2, ExternalLink, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useHabits, ResourceItem } from "@/hooks/useHabits";
 import { useAuth } from "@/hooks/useAuth";
+import { PrayerManager } from "@/components/PrayerManager";
 const PrayPage = () => {
   const navigate = useNavigate();
   const {
@@ -20,8 +22,10 @@ const PrayPage = () => {
   const {
     habitData,
     loading,
-    updateResources
+    updateResources,
+    updatePrayerList
   } = useHabits('pray');
+  const [showPrayerManager, setShowPrayerManager] = useState(false);
   const [newResource, setNewResource] = useState({
     title: '',
     url: '',
@@ -152,7 +156,12 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
                 <p className="text-sm text-muted-foreground">
                   {habitData.prayerList && habitData.prayerList.length > 0 
                     ? habitData.prayerList.map(person => person.name).join(', ')
-                    : 'Add people to pray for'
+                    : <button 
+                        onClick={() => setShowPrayerManager(true)}
+                        className="text-primary hover:underline cursor-pointer"
+                      >
+                        Add people to pray for
+                      </button>
                   }
                 </p>
               </div>
@@ -248,6 +257,20 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
           </CardContent>
         </Card>
       </div>
+
+      {/* Prayer Manager Dialog */}
+      <Dialog open={showPrayerManager} onOpenChange={setShowPrayerManager}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Prayer List Manager</DialogTitle>
+          </DialogHeader>
+          <PrayerManager
+            prayerList={habitData.prayerList || []}
+            onUpdatePrayerList={updatePrayerList}
+            onClose={() => setShowPrayerManager(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>;
 };
 export default PrayPage;
