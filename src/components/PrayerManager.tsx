@@ -8,13 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, MessageCircle, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { notificationService } from "@/services/notificationService";
-
-interface PrayerPerson {
-  id: string;
-  name: string;
-  cadence: 'daily' | 'weekly';
-  notificationTime?: string; // Format: "HH:MM"
-}
+import { usePrayerNotifications } from "@/hooks/usePrayerNotifications";
+import { PrayerPerson } from "@/hooks/useHabits";
 
 interface PrayerManagerProps {
   prayerList: PrayerPerson[];
@@ -28,6 +23,7 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
   const [newPersonTime, setNewPersonTime] = useState("09:00");
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const { toast } = useToast();
+  const { scheduleNotification, cancelNotification } = usePrayerNotifications();
 
   useEffect(() => {
     // Check and request notification permissions on component mount
@@ -82,8 +78,8 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     onUpdatePrayerList([...prayerList, newPerson]);
     
     // Schedule notification if enabled
-    if (notificationsEnabled) {
-      await scheduleNotificationForPerson(newPerson);
+    if (notificationsEnabled && newPerson.notificationTime) {
+      await scheduleNotification(newPerson.name, newPerson.cadence, newPerson.notificationTime);
     }
     
     setNewPersonName("");
@@ -96,11 +92,13 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     });
   };
 
-  const removePerson = (id: string) => {
+  const removePerson = async (id: string) => {
     const person = prayerList.find(p => p.id === id);
     onUpdatePrayerList(prayerList.filter(p => p.id !== id));
     
     if (person) {
+      // Note: We'll need to track notification IDs separately or find by person name
+      // For now, we'll just remove from the prayer list
       toast({
         title: "Person removed",
         description: `${person.name} has been removed from your prayer list.`
@@ -117,35 +115,12 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     // Reschedule notification with new cadence
     if (notificationsEnabled) {
       const person = updatedList.find(p => p.id === id);
-      if (person) {
-        await scheduleNotificationForPerson(person);
+      if (person && person.notificationTime) {
+        await scheduleNotification(person.name, cadence, person.notificationTime);
       }
     }
   };
 
-  const scheduleNotificationForPerson = async (person: PrayerPerson) => {
-    if (!person.notificationTime) return;
-
-    const [hours, minutes] = person.notificationTime.split(':').map(Number);
-    const now = new Date();
-    const notificationDate = new Date();
-    notificationDate.setHours(hours, minutes, 0, 0);
-
-    // If the time has passed today, schedule for tomorrow (daily) or next week (weekly)
-    if (notificationDate <= now) {
-      if (person.cadence === 'daily') {
-        notificationDate.setDate(notificationDate.getDate() + 1);
-      } else {
-        notificationDate.setDate(notificationDate.getDate() + 7);
-      }
-    }
-
-    try {
-      await notificationService.schedulePrayerReminder(person.name, notificationDate);
-    } catch (error) {
-      console.error('Error scheduling notification:', error);
-    }
-  };
 
   return (
     <div className="space-y-6">
