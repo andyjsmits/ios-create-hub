@@ -146,8 +146,8 @@ const PrayPage = () => {
             <CardTitle>About Prayer</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-muted-foreground leading-relaxed">Prayer is our primary way of seeking God first in all things. 
-By prioritizing praying for others, we align our hearts with God's heart for people.</p>
+            <p className="text-muted-foreground leading-relaxed">Prayer is our primary way of seeking God first in all things. 
+By prioritizing praying for others, we align our hearts with God's heart for people. Commit to praying each week or day for a few friends. If you're looking for suggestions how to pray, check out the resources below.</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
               
               <div className="text-center p-4 rounded-lg bg-muted/50">
