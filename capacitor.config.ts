@@ -21,6 +21,12 @@ const config: CapacitorConfig = {
       splashImmersive: true,
     },
   },
+  ios: {
+    icon: 'public/app-icon-1024.png',
+  },
+  android: {
+    icon: 'public/app-icon-512.png',
+  },
 };
 
 export default config;
