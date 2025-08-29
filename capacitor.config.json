@@ -1,0 +1,8 @@
+{
+  "appId": "app.smits.pulse",
+  "appName": "Pulse",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
