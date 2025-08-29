@@ -150,7 +150,7 @@ const Index = () => {
               </span>
             </h1>
             <p className="text-xl md:text-2xl font-medium max-w-3xl mx-auto leading-relaxed mb-8">
-              Five daily practices to deepen your faith and impact your world
+              Five practices to deepen your faith and impact your world
             </p>
             <div className="inline-flex items-center gap-3 px-8 py-4 bg-black/20 backdrop-blur-md rounded-2xl border border-white/20">
               <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
