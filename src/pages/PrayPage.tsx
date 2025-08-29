@@ -154,15 +154,9 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
                 <h3 className="font-semibold">My Prayer List</h3>
                 <p className="text-sm text-muted-foreground">
-                  {habitData.prayerList && habitData.prayerList.length > 0 
-                    ? habitData.prayerList.map(person => person.name).join(', ')
-                    : <button 
-                        onClick={() => setShowPrayerManager(true)}
-                        className="text-primary hover:underline cursor-pointer"
-                      >
+                  {habitData.prayerList && habitData.prayerList.length > 0 ? habitData.prayerList.map(person => person.name).join(', ') : <button onClick={() => setShowPrayerManager(true)} className="text-primary hover:underline cursor-pointer">
                         Add people to pray for
-                      </button>
-                  }
+                      </button>}
                 </p>
               </div>
               <div className="text-center p-4 rounded-lg bg-muted/50">
@@ -181,36 +175,7 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Add New Resource */}
-            <div className="border rounded-lg p-4 space-y-4">
-              <h3 className="font-semibold">Add New Resource</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="resource-title">Title</Label>
-                  <Input id="resource-title" placeholder="Resource title" value={newResource.title} onChange={e => setNewResource({
-                  ...newResource,
-                  title: e.target.value
-                })} />
-                </div>
-                <div>
-                  <Label htmlFor="resource-url">URL</Label>
-                  <Input id="resource-url" placeholder="https://..." value={newResource.url} onChange={e => setNewResource({
-                  ...newResource,
-                  url: e.target.value
-                })} />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="resource-description">Description (optional)</Label>
-                <Input id="resource-description" placeholder="Brief description" value={newResource.description} onChange={e => setNewResource({
-                ...newResource,
-                description: e.target.value
-              })} />
-              </div>
-              <Button onClick={addResource} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Resource
-              </Button>
-            </div>
+            
 
             {/* Resource List */}
             <div className="space-y-3">
@@ -264,11 +229,7 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
           <DialogHeader>
             <DialogTitle>Prayer List Manager</DialogTitle>
           </DialogHeader>
-          <PrayerManager
-            prayerList={habitData.prayerList || []}
-            onUpdatePrayerList={updatePrayerList}
-            onClose={() => setShowPrayerManager(false)}
-          />
+          <PrayerManager prayerList={habitData.prayerList || []} onUpdatePrayerList={updatePrayerList} onClose={() => setShowPrayerManager(false)} />
         </DialogContent>
       </Dialog>
     </div>;
