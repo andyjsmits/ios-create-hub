@@ -28,8 +28,14 @@ const PrayPage = () => {
     updateResources,
     updatePrayerList
   } = useHabits('pray');
-  const { toggleHabitCompletion, isHabitCompletedToday } = useHabitTracking();
-  const { prayerCompletions, loading: prayerLoading } = usePrayerTracking();
+  const {
+    toggleHabitCompletion,
+    isHabitCompletedToday
+  } = useHabitTracking();
+  const {
+    prayerCompletions,
+    loading: prayerLoading
+  } = usePrayerTracking();
   const [showPrayerManager, setShowPrayerManager] = useState(false);
   const [newResource, setNewResource] = useState({
     title: '',
@@ -52,7 +58,7 @@ const PrayPage = () => {
   // Group prayer completions by date to create prayer history
   const getPrayerHistory = () => {
     const historyMap = new Map();
-    
+
     // Group prayers by date
     prayerCompletions.forEach(completion => {
       const date = completion.completion_date;
@@ -64,20 +70,16 @@ const PrayPage = () => {
           notes: []
         });
       }
-      
       const entry = historyMap.get(date);
       entry.prayers.push(completion.person_name);
       if (completion.notes) {
         entry.notes.push(completion.notes);
       }
     });
-    
+
     // Convert to array and sort by date (newest first)
-    return Array.from(historyMap.values())
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 10); // Show last 10 entries
+    return Array.from(historyMap.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10); // Show last 10 entries
   };
-  
   const prayerHistory = getPrayerHistory();
   const addResource = () => {
     if (!user) {
@@ -155,12 +157,7 @@ const PrayPage = () => {
 
       <div className="container mx-auto px-6 py-12 max-w-4xl">
         {/* Prayer Activity Tracker */}
-        <PrayerTracker 
-          prayerList={habitData.prayerList || []}
-          onToggleHabitCompletion={() => toggleHabitCompletion('pray')}
-          isHabitCompletedToday={isHabitCompletedToday('pray')}
-          onOpenPrayerManager={() => setShowPrayerManager(true)}
-        />
+        <PrayerTracker prayerList={habitData.prayerList || []} onToggleHabitCompletion={() => toggleHabitCompletion('pray')} isHabitCompletedToday={isHabitCompletedToday('pray')} onOpenPrayerManager={() => setShowPrayerManager(true)} />
 
         {/* About This Habit */}
         <Card className="my-8">
@@ -174,19 +171,14 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
               
               <div className="text-center p-4 rounded-lg bg-muted/50">
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPrayerManager(true)}
-                  className="flex items-center gap-2 mb-2"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  Manage My Prayer List
-                </Button>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <h3 className="font-semibold">My Prayer List</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setShowPrayerManager(true)} className="h-6 w-6 p-0 text-primary hover:bg-primary/10">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
                 <p className="text-sm text-muted-foreground">
-                  {habitData.prayerList && habitData.prayerList.length > 0 
-                    ? habitData.prayerList.map(person => person.name).join(', ')
-                    : "Click + to add people to pray for"
-                  }
+                  {habitData.prayerList && habitData.prayerList.length > 0 ? habitData.prayerList.map(person => person.name).join(', ') : "Click + to add people to pray for"}
                 </p>
               </div>
               <div className="text-center p-4 rounded-lg bg-muted/50">
@@ -210,31 +202,25 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={newResource.title}
-                    onChange={(e) => setNewResource({ ...newResource, title: e.target.value })}
-                    placeholder="Resource title"
-                  />
+                  <Input id="title" value={newResource.title} onChange={e => setNewResource({
+                  ...newResource,
+                  title: e.target.value
+                })} placeholder="Resource title" />
                 </div>
                 <div>
                   <Label htmlFor="url">URL</Label>
-                  <Input
-                    id="url"
-                    value={newResource.url}
-                    onChange={(e) => setNewResource({ ...newResource, url: e.target.value })}
-                    placeholder="https://..."
-                  />
+                  <Input id="url" value={newResource.url} onChange={e => setNewResource({
+                  ...newResource,
+                  url: e.target.value
+                })} placeholder="https://..." />
                 </div>
               </div>
               <div>
                 <Label htmlFor="description">Description (optional)</Label>
-                <Input
-                  id="description"
-                  value={newResource.description}
-                  onChange={(e) => setNewResource({ ...newResource, description: e.target.value })}
-                  placeholder="Brief description"
-                />
+                <Input id="description" value={newResource.description} onChange={e => setNewResource({
+                ...newResource,
+                description: e.target.value
+              })} placeholder="Brief description" />
               </div>
               <Button onClick={addResource} className="w-full">
                 <Plus className="h-4 w-4 mr-2" />
@@ -249,7 +235,7 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
                     <h4 className="font-medium">{resource.title}</h4>
                     {resource.description && <p className="text-sm text-muted-foreground">{resource.description}</p>}
                     <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline inline-flex items-center mt-1">
-                      {resource.url} <ExternalLink className="h-3 w-3 ml-1" />
+                      {resource.url} 
                     </a>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => removeResource(resource.id)} className="text-destructive hover:text-destructive">
@@ -266,42 +252,34 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
             <CardTitle>Prayer History</CardTitle>
           </CardHeader>
           <CardContent>
-            {prayerHistory.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+            {prayerHistory.length === 0 ? <div className="text-center py-8 text-muted-foreground">
                 <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>No prayer history yet. Start praying for people to see your history here!</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {prayerHistory.map((entry, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+              </div> : <div className="space-y-3">
+                {prayerHistory.map((entry, index) => <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-4">
                       <div className="w-3 h-3 rounded-full bg-green-500"></div>
                       <div>
                         <p className="font-medium">
                           {new Date(entry.date).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Prayed for: {entry.prayers.join(', ')}
                         </p>
-                        {entry.notes.length > 0 && (
-                          <p className="text-sm text-muted-foreground mt-1">
+                        {entry.notes.length > 0 && <p className="text-sm text-muted-foreground mt-1">
                             Notes: {entry.notes.join('; ')}
-                          </p>
-                        )}
+                          </p>}
                       </div>
                     </div>
                     <Badge variant="default">
                       Completed
                     </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
+                  </div>)}
+              </div>}
           </CardContent>
         </Card>
       </div>
