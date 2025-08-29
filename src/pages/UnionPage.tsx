@@ -179,42 +179,61 @@ const UnionPage = () => {
           <CardHeader>
             <CardTitle>Weekly Goal</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4 mb-4">
-              <Label htmlFor="weekly-goal">How many times per week would you like to engage with missional scripture?</Label>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <Label htmlFor="weekly-goal" className="text-base">
+                How many times per week would you like to engage with missional scripture?
+              </Label>
+              
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="weekly-goal"
+                    type="number"
+                    min="1"
+                    max="7"
+                    value={newGoal}
+                    onChange={(e) => setNewGoal(e.target.value)}
+                    className="w-16 text-center"
+                  />
+                  <span className="text-muted-foreground whitespace-nowrap">
+                    times per week
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">
+                    (recommended: 2)
+                  </span>
+                  <Button 
+                    onClick={handleUpdateGoal}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Update Goal
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <Input
-                id="weekly-goal"
-                type="number"
-                min="1"
-                max="7"
-                value={newGoal}
-                onChange={(e) => setNewGoal(e.target.value)}
-                className="w-20"
-              />
-              <span className="text-muted-foreground">times per week (recommended: 2)</span>
-              <Button 
-                onClick={handleUpdateGoal}
-                variant="outline"
-                size="sm"
-              >
-                Update Goal
-              </Button>
-            </div>
-            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+
+            <div className="p-4 bg-muted/50 rounded-lg space-y-3">
               <div className="flex items-center justify-between">
                 <span className="font-medium">This week's progress:</span>
                 <span className="text-lg font-bold">
                   {weeklyProgress} / {weeklyGoal}
                 </span>
               </div>
-              <div className="w-full bg-muted rounded-full h-2 mt-2">
+              <div className="w-full bg-muted rounded-full h-3">
                 <div 
-                  className="bg-primary rounded-full h-2 transition-all"
+                  className="bg-primary rounded-full h-3 transition-all duration-300"
                   style={{ width: `${Math.min((weeklyProgress / weeklyGoal) * 100, 100)}%` }}
                 ></div>
               </div>
+              {weeklyProgress >= weeklyGoal && (
+                <div className="text-sm text-green-600 font-medium">
+                  🎉 Congratulations! You've reached your weekly goal!
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
