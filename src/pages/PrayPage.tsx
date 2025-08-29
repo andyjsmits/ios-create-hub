@@ -198,7 +198,7 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
           <CardContent className="space-y-6">
             {/* Add New Resource */}
             <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
-              <h4 className="font-medium">Add New Resource</h4>
+              <h4 className="font-medium">P2C Articles</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="title">Title</Label>
