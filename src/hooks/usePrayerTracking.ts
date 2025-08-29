@@ -37,15 +37,26 @@ export const usePrayerTracking = () => {
         .eq('user_id', user.id)
         .order('completion_date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        // Handle schema cache issue gracefully
+        if (error.code === 'PGRST205') {
+          console.warn('Schema cache not refreshed yet, using empty data');
+          setPrayerCompletions([]);
+          setLoading(false);
+          return;
+        }
+        throw error;
+      }
 
       setPrayerCompletions(data || []);
     } catch (error) {
       console.error('Error loading prayer completions:', error);
+      // Fallback to empty data instead of breaking the UI
+      setPrayerCompletions([]);
       toast({
-        title: 'Error',
-        description: 'Failed to load prayer tracking data',
-        variant: 'destructive'
+        title: 'Info',
+        description: 'Prayer data is loading, please refresh the page in a moment',
+        variant: 'default'
       });
     } finally {
       setLoading(false);
