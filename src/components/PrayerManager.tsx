@@ -112,9 +112,11 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     const person = prayerList.find(p => p.id === personId);
     if (!person) return;
 
-    const newDays = person.daysOfWeek.includes(day)
-      ? person.daysOfWeek.filter(d => d !== day)
-      : [...person.daysOfWeek, day].sort();
+    // Ensure daysOfWeek exists and is an array
+    const currentDays = person.daysOfWeek || [];
+    const newDays = currentDays.includes(day)
+      ? currentDays.filter(d => d !== day)
+      : [...currentDays, day].sort();
 
     updatePersonDays(personId, newDays);
   };
@@ -215,7 +217,7 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
                           <Button
                             key={day.value}
                             type="button"
-                            variant={person.daysOfWeek.includes(day.value) ? "default" : "outline"}
+                            variant={(person.daysOfWeek || []).includes(day.value) ? "default" : "outline"}
                             size="sm"
                             onClick={() => togglePersonDay(person.id, day.value)}
                             className="text-xs p-1 h-8"
@@ -224,9 +226,9 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
                           </Button>
                         ))}
                       </div>
-                      {person.daysOfWeek.length > 0 && (
+                       {(person.daysOfWeek || []).length > 0 && (
                         <p className="text-xs text-muted-foreground">
-                          {person.daysOfWeek.map(day => daysOfWeek[day].label).join(', ')}
+                          {(person.daysOfWeek || []).map(day => daysOfWeek[day].label).join(', ')}
                         </p>
                       )}
                     </div>
