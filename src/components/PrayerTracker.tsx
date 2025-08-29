@@ -35,7 +35,20 @@ export const PrayerTracker = ({
   // Get today's prayer list based on selected days of week
   const getTodaysPrayerList = () => {
     const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
-    return prayerList.filter(person => person.daysOfWeek.includes(today));
+    return prayerList.filter(person => {
+      // Handle backward compatibility with old data format
+      if (person.daysOfWeek && Array.isArray(person.daysOfWeek)) {
+        // New format: use daysOfWeek array
+        return person.daysOfWeek.includes(today);
+      } else if ((person as any).cadence) {
+        // Old format: convert from cadence/dayOfWeek to daysOfWeek logic
+        const oldPerson = person as any;
+        if (oldPerson.cadence === 'daily') return true;
+        if (oldPerson.cadence === 'weekly') return oldPerson.dayOfWeek === today;
+      }
+      // Fallback: don't show if data is malformed
+      return false;
+    });
   };
 
   const todaysPrayerList = getTodaysPrayerList();
