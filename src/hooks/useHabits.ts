@@ -7,6 +7,7 @@ export interface HabitData {
   prayerList?: PrayerPerson[];
   resources?: ResourceItem[];
   trackingHistory?: TrackingEntry[];
+  weeklyGoal?: number;
 }
 
 export interface PrayerPerson {
