@@ -172,10 +172,12 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
               <div className="text-center p-4 rounded-lg bg-muted/50">
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <h3 className="font-semibold">My Prayer List</h3>
-                  <Button variant="ghost" size="sm" onClick={() => setShowPrayerManager(true)} className="h-6 w-6 p-0 text-primary hover:bg-primary/10">
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  <button 
+                    onClick={() => setShowPrayerManager(true)}
+                    className="font-semibold text-primary hover:underline cursor-pointer"
+                  >
+                    Manage My Prayer List
+                  </button>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {habitData.prayerList && habitData.prayerList.length > 0 ? habitData.prayerList.map(person => person.name).join(', ') : "Click + to add people to pray for"}
