@@ -44,6 +44,33 @@ export type Database = {
         }
         Relationships: []
       }
+      habit_completions: {
+        Row: {
+          completion_date: string
+          created_at: string
+          habit_type: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completion_date: string
+          created_at?: string
+          habit_type: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completion_date?: string
+          created_at?: string
+          habit_type?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       habits: {
         Row: {
           created_at: string
