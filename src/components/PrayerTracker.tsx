@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { CheckCircle2, Circle, Calendar, MessageCircle } from 'lucide-react';
+import { CheckCircle2, Circle, Calendar, MessageCircle, Square, CheckSquare } from 'lucide-react';
 import { usePrayerTracking } from '@/hooks/usePrayerTracking';
 import { useHabitTracking } from '@/hooks/useHabitTracking';
 import { PrayerPerson } from '@/hooks/useHabits';
@@ -152,25 +152,19 @@ export const PrayerTracker = ({
                       </div>
                     </div>
                     <Button
-                      variant={isPrayedFor ? "secondary" : "outline"}
+                      variant="ghost"
                       size="sm"
                       onClick={() => handlePersonToggle(person.name)}
-                      className={`min-w-[120px] transition-all duration-200 ${
+                      className={`p-2 h-8 w-8 transition-all duration-200 ${
                         isPrayedFor 
-                          ? 'bg-green-100 hover:bg-green-200 text-green-800 border-green-300' 
-                          : 'hover:bg-primary/5 hover:border-primary/50'
+                          ? 'text-green-600 hover:text-green-700' 
+                          : 'text-muted-foreground hover:text-primary'
                       }`}
                     >
                       {isPrayedFor ? (
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span className="hidden sm:inline">Prayed for</span>
-                        </div>
+                        <CheckSquare className="h-5 w-5" />
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <Circle className="h-4 w-4" />
-                          <span className="hidden sm:inline">Mark as prayed for</span>
-                        </div>
+                        <Square className="h-5 w-5" />
                       )}
                     </Button>
                   </div>
