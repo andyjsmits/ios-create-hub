@@ -6,6 +6,7 @@ import { PrayerManager } from "@/components/PrayerManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useHabits, PrayerPerson } from "@/hooks/useHabits";
+import { useHabitTracking } from "@/hooks/useHabitTracking";
 import { MessageCircle, Book, Ear, HandHeart, Volume2, Settings } from "lucide-react";
 import p2cLogo from "@/assets/p2c-students-logos.png";
 
@@ -13,15 +14,13 @@ const Index = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { habitData: prayHabitData, loading: prayLoading, updatePrayerList } = useHabits('pray');
-
-  // Initialize local state for habits completion tracking
-  const [habitCompletions, setHabitCompletions] = useState({
-    pray: false,
-    union: false,
-    listen: false,
-    serve: false,
-    echo: false
-  });
+  const { 
+    isHabitCompletedToday, 
+    toggleHabitCompletion, 
+    calculateStreak, 
+    calculateWeeklyProgress,
+    loading: trackingLoading 
+  } = useHabitTracking();
 
   const [showPrayerManager, setShowPrayerManager] = useState(false);
 
@@ -34,7 +33,7 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
-  if (loading || prayLoading) {
+  if (loading || prayLoading || trackingLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -94,7 +93,7 @@ const Index = () => {
     }
   };
 
-  const toggleHabit = (area: keyof typeof habitCompletions) => {
+  const toggleHabit = async (area: keyof typeof pulseHabits) => {
     if (area === 'pray') {
       // If prayer list is empty, open prayer manager instead of toggling
       if (prayerList.length === 0) {
@@ -103,10 +102,7 @@ const Index = () => {
       }
     }
     
-    setHabitCompletions(prev => ({
-      ...prev,
-      [area]: !prev[area]
-    }));
+    await toggleHabitCompletion(area);
   };
 
   const handleHabitNavigation = (habitKey: string) => {
@@ -128,11 +124,14 @@ const Index = () => {
     updatePrayerList(newPrayerList);
   };
 
-  // Calculate stats
+  // Calculate stats from real data
   const totalHabits = Object.keys(pulseHabits).length;
-  const totalCompleted = Object.values(habitCompletions).filter(completed => completed).length;
-  const streak = 7; // This would come from stored data
-  const weeklyGoal = 5; // Complete all 5 PULSE habits
+  const todayCompletions = Object.keys(pulseHabits).filter(habit => 
+    isHabitCompletedToday(habit as 'pray' | 'union' | 'listen' | 'serve' | 'echo')
+  ).length;
+  const streak = calculateStreak();
+  const weeklyProgress = calculateWeeklyProgress();
+  const weeklyGoalMet = weeklyProgress.completed;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -170,10 +169,11 @@ const Index = () => {
         {/* Overview Stats */}
         <div className="mb-12">
           <OverviewStats 
-            totalCompleted={totalCompleted}
+            totalCompleted={todayCompletions}
             totalHabits={totalHabits}
             streak={streak}
-            weeklyGoal={weeklyGoal}
+            weeklyGoal={weeklyProgress.habitsCounted.size}
+            weeklyGoalMet={weeklyGoalMet}
           />
         </div>
 
@@ -186,8 +186,8 @@ const Index = () => {
               description={habitConfig.description}
               icon={habitConfig.icon}
               type={habitConfig.type}
-              completed={habitCompletions[key as keyof typeof habitCompletions]}
-              onToggle={() => toggleHabit(key as keyof typeof habitCompletions)}
+              completed={isHabitCompletedToday(key as 'pray' | 'union' | 'listen' | 'serve' | 'echo')}
+              onToggle={() => toggleHabit(key as keyof typeof pulseHabits)}
               onAction={key === 'pray' ? handlePrayerAction : undefined}
               actionLabel={key === 'pray' ? 'Manage Prayer List' : undefined}
               actionIcon={key === 'pray' ? <Settings className="h-4 w-4" /> : undefined}
