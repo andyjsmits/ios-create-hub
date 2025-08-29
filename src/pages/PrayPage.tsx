@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useHabits, ResourceItem } from "@/hooks/useHabits";
 import { useAuth } from "@/hooks/useAuth";
 import { useHabitTracking } from "@/hooks/useHabitTracking";
+import { usePrayerTracking } from "@/hooks/usePrayerTracking";
 import { PrayerManager } from "@/components/PrayerManager";
 import { PrayerTracker } from "@/components/PrayerTracker";
 const PrayPage = () => {
@@ -28,6 +29,7 @@ const PrayPage = () => {
     updatePrayerList
   } = useHabits('pray');
   const { toggleHabitCompletion, isHabitCompletedToday } = useHabitTracking();
+  const { prayerCompletions, loading: prayerLoading } = usePrayerTracking();
   const [showPrayerManager, setShowPrayerManager] = useState(false);
   const [newResource, setNewResource] = useState({
     title: '',
@@ -47,27 +49,36 @@ const PrayPage = () => {
     url: 'https://example.com',
     description: 'Structured prayer times'
   }];
-  const trackingHistory = habitData.trackingHistory || [{
-    date: '2024-01-26',
-    completed: true,
-    notes: 'Prayed for John, Sarah, Mike'
-  }, {
-    date: '2024-01-25',
-    completed: true,
-    notes: 'Morning prayer session'
-  }, {
-    date: '2024-01-24',
-    completed: false,
-    notes: ''
-  }, {
-    date: '2024-01-23',
-    completed: true,
-    notes: 'Prayer walk'
-  }, {
-    date: '2024-01-22',
-    completed: true,
-    notes: 'Group prayer meeting'
-  }];
+  // Group prayer completions by date to create prayer history
+  const getPrayerHistory = () => {
+    const historyMap = new Map();
+    
+    // Group prayers by date
+    prayerCompletions.forEach(completion => {
+      const date = completion.completion_date;
+      if (!historyMap.has(date)) {
+        historyMap.set(date, {
+          date,
+          completed: true,
+          prayers: [],
+          notes: []
+        });
+      }
+      
+      const entry = historyMap.get(date);
+      entry.prayers.push(completion.person_name);
+      if (completion.notes) {
+        entry.notes.push(completion.notes);
+      }
+    });
+    
+    // Convert to array and sort by date (newest first)
+    return Array.from(historyMap.values())
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 10); // Show last 10 entries
+  };
+  
+  const prayerHistory = getPrayerHistory();
   const addResource = () => {
     if (!user) {
       toast({
@@ -107,7 +118,7 @@ const PrayPage = () => {
       description: "Prayer resource has been removed."
     });
   };
-  if (loading) {
+  if (loading || prayerLoading) {
     return <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -216,30 +227,48 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
           </CardContent>
         </Card>
 
-        {/* Tracking History */}
+        {/* Prayer History */}
         <Card>
           <CardHeader>
             <CardTitle>Prayer History</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {trackingHistory.map((entry, index) => <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-3 h-3 rounded-full ${entry.completed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                    <div>
-                      <p className="font-medium">{new Date(entry.date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      month: 'long',
-                      day: 'numeric'
-                    })}</p>
-                      {entry.notes && <p className="text-sm text-muted-foreground">{entry.notes}</p>}
+            {prayerHistory.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No prayer history yet. Start praying for people to see your history here!</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {prayerHistory.map((entry, index) => (
+                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      <div>
+                        <p className="font-medium">
+                          {new Date(entry.date).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Prayed for: {entry.prayers.join(', ')}
+                        </p>
+                        {entry.notes.length > 0 && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Notes: {entry.notes.join('; ')}
+                          </p>
+                        )}
+                      </div>
                     </div>
+                    <Badge variant="default">
+                      Completed
+                    </Badge>
                   </div>
-                  <Badge variant={entry.completed ? 'default' : 'secondary'}>
-                    {entry.completed ? 'Completed' : 'Missed'}
-                  </Badge>
-                </div>)}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
