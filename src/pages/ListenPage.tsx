@@ -172,7 +172,7 @@ const ListenPage = () => {
                       type="number"
                       value={weeklyGoal}
                       readOnly
-                      className="w-20 text-center"
+                      className="w-16 text-center font-medium"
                       min="1"
                     />
                     <Button
