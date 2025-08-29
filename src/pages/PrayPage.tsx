@@ -189,27 +189,18 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
         {/* Resources Section */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Prayer Resources</CardTitle>
+            <CardTitle>P2C Articles</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Add New Resource */}
-            
-
-            {/* Resource List */}
-            <div className="space-y-3">
-              {resources.map(resource => <div key={resource.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{resource.title}</h4>
-                    {resource.description && <p className="text-sm text-muted-foreground">{resource.description}</p>}
-                    <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline inline-flex items-center mt-1">
-                      {resource.url} 
-                    </a>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => removeResource(resource.id)} className="text-destructive hover:text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>)}
-            </div>
+          <CardContent>
+            <a 
+              href="https://p2cstudents.com/articles/?q=prayer" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
+            >
+              Read some great resources on prayer
+              <ExternalLink className="h-4 w-4" />
+            </a>
           </CardContent>
         </Card>
 
