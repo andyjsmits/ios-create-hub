@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Ear, Users, MessageSquare, Calendar, CheckCircle } from "lucide-react";
+import { ArrowLeft, Ear, Users, MessageSquare, Calendar, CheckCircle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useHabits } from "@/hooks/useHabits";
 
@@ -128,22 +128,21 @@ const ListenPage = () => {
               Have one "curious conversation" a week, where you are intentional to ask good questions 
               and listen more than you speak. You could do this together with someone in your community.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <h3 className="font-semibold">Ask Good Questions</h3>
-                <p className="text-sm text-muted-foreground">Be intentionally curious</p>
-              </div>
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <Users className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <h3 className="font-semibold">Listen More</h3>
-                <p className="text-sm text-muted-foreground">Speak less, hear more</p>
-              </div>
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <Calendar className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <h3 className="font-semibold">Weekly Practice</h3>
-                <p className="text-sm text-muted-foreground">Consistent engagement</p>
-              </div>
+            <p className="text-muted-foreground leading-relaxed">
+              We want to become the kinds of people who are shaped by the practice of seeking to understand 
+              others well, listening our way into spiritual conversations. Through genuine curiosity and 
+              deep listening, we create space for meaningful dialogue and connection.
+            </p>
+            <div className="pt-4">
+              <a 
+                href="https://p2cstudents.com/articles/two-invisible-tools-to-ignite-spiritual-conversation"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+              >
+                Read: Two Invisible Tools to Ignite Spiritual Conversation
+                <ExternalLink className="h-4 w-4" />
+              </a>
             </div>
           </CardContent>
         </Card>
