@@ -5,59 +5,87 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Ear, Plus, Trash2, ExternalLink, Users, MessageSquare } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Ear, Users, MessageSquare, Calendar, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useHabits } from "@/hooks/useHabits";
 
 const ListenPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { habitData, loading, saveHabitData } = useHabits('listen');
   
-  const [resources, setResources] = useState([
-    { id: '1', title: 'Active Listening Guide', url: 'https://example.com', description: 'Techniques for better listening' },
-    { id: '2', title: 'Conversation Starters', url: 'https://example.com', description: 'Questions to engage others' }
-  ]);
+  const [conversationNotes, setConversationNotes] = useState('');
   
-  const [newResource, setNewResource] = useState({ title: '', url: '', description: '' });
+  const weeklyGoal = habitData.weeklyGoal || 1;
+  const trackingHistory = habitData.trackingHistory || [];
   
-  const [trackingHistory] = useState([
-    { date: '2024-01-26', completed: true, notes: 'Had deep conversation with Sarah about her struggles' },
-    { date: '2024-01-25', completed: true, notes: 'Listened to coworker during lunch' },
-    { date: '2024-01-24', completed: false, notes: '' },
-    { date: '2024-01-23', completed: true, notes: 'Phone call with friend going through difficult time' },
-    { date: '2024-01-22', completed: true, notes: 'Family conversation at dinner' }
-  ]);
+  // Get current week's completions
+  const getCurrentWeekStart = () => {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const start = new Date(now);
+    start.setDate(now.getDate() - dayOfWeek);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  };
+  
+  const currentWeekCompletions = trackingHistory.filter(entry => {
+    const entryDate = new Date(entry.date);
+    const weekStart = getCurrentWeekStart();
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    return entryDate >= weekStart && entryDate <= weekEnd && entry.completed;
+  }).length;
 
-  const addResource = () => {
-    if (!newResource.title || !newResource.url) {
+  const handleMarkCompleted = async () => {
+    if (!conversationNotes.trim()) {
       toast({
-        title: "Missing information",
-        description: "Please provide both title and URL for the resource.",
+        title: "Please add notes",
+        description: "Share something interesting or remarkable about your conversation.",
         variant: "destructive"
       });
       return;
     }
 
-    const resource = {
-      id: Date.now().toString(),
-      ...newResource
+    const today = new Date().toISOString().split('T')[0];
+    const todayEntry = trackingHistory.find(entry => entry.date === today);
+    
+    if (todayEntry?.completed) {
+      toast({
+        title: "Already recorded",
+        description: "You've already marked a conversation for today.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const newEntry = {
+      date: today,
+      completed: true,
+      notes: conversationNotes.trim()
     };
 
-    setResources([...resources, resource]);
-    setNewResource({ title: '', url: '', description: '' });
+    const updatedHistory = [...trackingHistory.filter(entry => entry.date !== today), newEntry]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    await saveHabitData({ trackingHistory: updatedHistory });
+    setConversationNotes('');
     
     toast({
-      title: "Resource added",
-      description: "Listen resource has been added successfully."
+      title: "Conversation recorded",
+      description: "Your curious conversation has been tracked!"
     });
   };
 
-  const removeResource = (id: string) => {
-    setResources(resources.filter(r => r.id !== id));
-    toast({
-      title: "Resource removed",
-      description: "Listen resource has been removed."
-    });
+  const updateWeeklyGoal = async (newGoal: number) => {
+    if (newGoal < 1) return;
+    await saveHabitData({ weeklyGoal: newGoal });
   };
+
+  if (loading) {
+    return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -93,138 +121,151 @@ const ListenPage = () => {
         {/* About This Habit */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>About Listening</CardTitle>
+            <CardTitle>About Curious Conversations</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground leading-relaxed">
-              Listening is a way of loving people. When we journey with others as learners, we create space 
-              for deeper relationships and understanding. Through active listening and meaningful questions, 
-              we show others that they matter and their stories are important.
+              Have one "curious conversation" a week, where you are intentional to ask good questions 
+              and listen more than you speak. You could do this together with someone in your community.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
               <div className="text-center p-4 rounded-lg bg-muted/50">
                 <MessageSquare className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <h3 className="font-semibold">Meaningful Questions</h3>
-                <p className="text-sm text-muted-foreground">Engage with curiosity</p>
+                <h3 className="font-semibold">Ask Good Questions</h3>
+                <p className="text-sm text-muted-foreground">Be intentionally curious</p>
               </div>
               <div className="text-center p-4 rounded-lg bg-muted/50">
                 <Users className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <h3 className="font-semibold">Deep Relationships</h3>
-                <p className="text-sm text-muted-foreground">Journey with others</p>
+                <h3 className="font-semibold">Listen More</h3>
+                <p className="text-sm text-muted-foreground">Speak less, hear more</p>
               </div>
               <div className="text-center p-4 rounded-lg bg-muted/50">
-                <Plus className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <h3 className="font-semibold">Resources</h3>
-                <p className="text-sm text-muted-foreground">Listening tools and guides</p>
+                <Calendar className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold">Weekly Practice</h3>
+                <p className="text-sm text-muted-foreground">Consistent engagement</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Resources Section */}
+        {/* Weekly Goal */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Listening Resources</CardTitle>
+            <CardTitle>Weekly Goal</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Add New Resource */}
-            <div className="border rounded-lg p-4 space-y-4">
-              <h3 className="font-semibold">Add New Resource</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="resource-title">Title</Label>
-                  <Input
-                    id="resource-title"
-                    placeholder="Resource title"
-                    value={newResource.title}
-                    onChange={(e) => setNewResource({...newResource, title: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="resource-url">URL</Label>
-                  <Input
-                    id="resource-url"
-                    placeholder="https://..."
-                    value={newResource.url}
-                    onChange={(e) => setNewResource({...newResource, url: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="resource-description">Description (optional)</Label>
-                <Input
-                  id="resource-description"
-                  placeholder="Brief description"
-                  value={newResource.description}
-                  onChange={(e) => setNewResource({...newResource, description: e.target.value})}
-                />
-              </div>
-              <Button onClick={addResource} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Resource
-              </Button>
-            </div>
-
-            {/* Resource List */}
-            <div className="space-y-3">
-              {resources.map((resource) => (
-                <div key={resource.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{resource.title}</h4>
-                    {resource.description && (
-                      <p className="text-sm text-muted-foreground">{resource.description}</p>
-                    )}
-                    <a 
-                      href={resource.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline inline-flex items-center mt-1"
+          <CardContent>
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="weekly-goal">Curious conversations per week</Label>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateWeeklyGoal(weeklyGoal - 1)}
+                      disabled={weeklyGoal <= 1}
                     >
-                      {resource.url} <ExternalLink className="h-3 w-3 ml-1" />
-                    </a>
+                      -
+                    </Button>
+                    <Input
+                      id="weekly-goal"
+                      type="number"
+                      value={weeklyGoal}
+                      onChange={(e) => updateWeeklyGoal(parseInt(e.target.value) || 1)}
+                      className="w-20 text-center"
+                      min="1"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateWeeklyGoal(weeklyGoal + 1)}
+                    >
+                      +
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeResource(resource.id)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
-              ))}
+                <div className="flex-1 w-full sm:w-auto">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">This week's progress</span>
+                    <span className="text-sm text-muted-foreground">
+                      {currentWeekCompletions} / {weeklyGoal}
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
+                      style={{ width: `${Math.min((currentWeekCompletions / weeklyGoal) * 100, 100)}%` }}
+                    />
+                  </div>
+                  {currentWeekCompletions >= weeklyGoal && (
+                    <p className="text-sm text-green-600 font-medium mt-2">🎉 Goal achieved this week!</p>
+                  )}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Tracking History */}
-        <Card>
+        {/* Today's Conversation */}
+        <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Listening History</CardTitle>
+            <CardTitle>Record Today's Conversation</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="conversation-notes">
+                What was interesting or remarkable about your conversation?
+              </Label>
+              <Textarea
+                id="conversation-notes"
+                placeholder="Share what you learned, discovered, or found meaningful..."
+                value={conversationNotes}
+                onChange={(e) => setConversationNotes(e.target.value)}
+                className="mt-2"
+                rows={4}
+              />
+            </div>
+            <Button onClick={handleMarkCompleted} className="w-full" size="lg">
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Record Conversation
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Conversation History */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Conversation History</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {trackingHistory.map((entry, index) => (
-                <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-3 h-3 rounded-full ${entry.completed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                    <div>
-                      <p className="font-medium">{new Date(entry.date).toLocaleDateString('en-US', { 
-                        weekday: 'long', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}</p>
-                      {entry.notes && (
-                        <p className="text-sm text-muted-foreground">{entry.notes}</p>
-                      )}
+            {trackingHistory.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No conversations recorded yet. Start your first curious conversation!
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {trackingHistory.slice(0, 10).map((entry, index) => (
+                  <div key={index} className="flex items-start justify-between p-4 border rounded-lg">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className={`w-3 h-3 rounded-full mt-2 ${entry.completed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <div className="flex-1">
+                        <p className="font-medium">{new Date(entry.date).toLocaleDateString('en-US', { 
+                          weekday: 'long', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}</p>
+                        {entry.notes && (
+                          <p className="text-sm text-muted-foreground mt-1">{entry.notes}</p>
+                        )}
+                      </div>
                     </div>
+                    <Badge variant={entry.completed ? 'default' : 'secondary'}>
+                      {entry.completed ? 'Completed' : 'Missed'}
+                    </Badge>
                   </div>
-                  <Badge variant={entry.completed ? 'default' : 'secondary'}>
-                    {entry.completed ? 'Completed' : 'Missed'}
-                  </Badge>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
