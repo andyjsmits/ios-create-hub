@@ -210,7 +210,7 @@ const Index = () => {
               </cite>
             </div>
             <p className="text-lg font-medium text-muted-foreground">
-              Every habit completed is a step forward in your faith journey.
+              Helping students take their next steps towards Jesus
             </p>
             <div className="mt-6 inline-flex items-center gap-3">
               <div className="h-1 w-12 bg-primary rounded-full"></div>
