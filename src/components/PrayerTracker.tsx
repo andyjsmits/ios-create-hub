@@ -8,28 +8,25 @@ import { CheckCircle2, Circle, Calendar, MessageCircle, Square, CheckSquare } fr
 import { usePrayerTracking } from '@/hooks/usePrayerTracking';
 import { useHabitTracking } from '@/hooks/useHabitTracking';
 import { PrayerPerson } from '@/hooks/useHabits';
-
 interface PrayerTrackerProps {
   prayerList: PrayerPerson[];
   onToggleHabitCompletion: () => void;
   isHabitCompletedToday: boolean;
   onOpenPrayerManager?: () => void;
 }
-
-export const PrayerTracker = ({ 
-  prayerList, 
-  onToggleHabitCompletion, 
+export const PrayerTracker = ({
+  prayerList,
+  onToggleHabitCompletion,
   isHabitCompletedToday,
   onOpenPrayerManager
 }: PrayerTrackerProps) => {
   const [notes, setNotes] = useState('');
   const [selectedPeople, setSelectedPeople] = useState<Set<string>>(new Set());
-  const { 
-    isPrayedForToday, 
-    togglePrayerCompletion, 
-    getTodaysPrayerCompletions 
+  const {
+    isPrayedForToday,
+    togglePrayerCompletion,
+    getTodaysPrayerCompletions
   } = usePrayerTracking();
-
   const todaysCompletions = getTodaysPrayerCompletions();
 
   // Get today's prayer list based on selected days of week
@@ -50,9 +47,7 @@ export const PrayerTracker = ({
       return false;
     });
   };
-
   const todaysPrayerList = getTodaysPrayerList();
-
   const handlePersonToggle = async (personName: string) => {
     await togglePrayerCompletion(personName, undefined, notes);
     setSelectedPeople(prev => {
@@ -65,24 +60,18 @@ export const PrayerTracker = ({
       return newSet;
     });
   };
-
   const handleMarkAllComplete = async () => {
     for (const person of todaysPrayerList) {
       if (!isPrayedForToday(person.name)) {
         await togglePrayerCompletion(person.name, undefined, notes);
       }
     }
-    
     if (!isHabitCompletedToday) {
       onToggleHabitCompletion();
     }
   };
-
-  const allTodaysPrayersComplete = todaysPrayerList.length > 0 && 
-    todaysPrayerList.every(person => isPrayedForToday(person.name));
-
-  return (
-    <Card className="w-full">
+  const allTodaysPrayersComplete = todaysPrayerList.length > 0 && todaysPrayerList.every(person => isPrayedForToday(person.name));
+  return <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5" />
@@ -91,115 +80,55 @@ export const PrayerTracker = ({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Overall Prayer Habit Status */}
-        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-          <div className="flex items-center gap-3">
-            <div className={`w-3 h-3 rounded-full ${isHabitCompletedToday ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-            <div>
-              <p className="font-medium">Daily Prayer Habit</p>
-              <p className="text-sm text-muted-foreground">
-                {isHabitCompletedToday ? 'Completed today' : 'Not completed yet'}
-              </p>
-            </div>
-          </div>
-          {!isHabitCompletedToday && (
-            <Button
-              onClick={onToggleHabitCompletion}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              Mark Complete
-            </Button>
-          )}
-        </div>
+        
 
         {/* Today's Prayer List */}
-        {todaysPrayerList.length > 0 ? (
-          <div className="space-y-4">
+        {todaysPrayerList.length > 0 ? <div className="space-y-4">
             <h4 className="font-medium">Pray for:</h4>
             <div className="space-y-3">
-              {todaysPrayerList.map((person) => (
-                <div key={person.id} className="flex items-center justify-between p-3 border rounded-lg bg-background">
+              {todaysPrayerList.map(person => <div key={person.id} className="flex items-center justify-between p-3 border rounded-lg bg-background">
                   <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handlePersonToggle(person.name)}
-                      className={`w-8 h-8 rounded-md flex items-center justify-center transition-all hover:scale-105 ${
-                        isPrayedForToday(person.name)
-                          ? 'bg-primary text-primary-foreground'
-                          : 'border-2 border-muted-foreground/20 hover:border-primary/40'
-                      }`}
-                    >
-                      {isPrayedForToday(person.name) ? (
-                        <CheckSquare className="h-4 w-4" />
-                      ) : (
-                        <Square className="h-4 w-4" />
-                      )}
+                    <button onClick={() => handlePersonToggle(person.name)} className={`w-8 h-8 rounded-md flex items-center justify-center transition-all hover:scale-105 ${isPrayedForToday(person.name) ? 'bg-primary text-primary-foreground' : 'border-2 border-muted-foreground/20 hover:border-primary/40'}`}>
+                      {isPrayedForToday(person.name) ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                     </button>
                     <span className={`font-medium ${isPrayedForToday(person.name) ? 'line-through text-muted-foreground' : ''}`}>
                       {person.name}
                     </span>
                   </div>
-                </div>
-              ))}
+                </div>)}
             </div>
 
             {/* Prayer Notes */}
             <div className="space-y-2">
               <Label htmlFor="prayer-notes">Prayer Notes (Optional)</Label>
-              <Textarea
-                id="prayer-notes"
-                placeholder="Add any prayer notes or reflections..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-              />
+              <Textarea id="prayer-notes" placeholder="Add any prayer notes or reflections..." value={notes} onChange={e => setNotes(e.target.value)} rows={3} />
             </div>
 
             {/* Mark All Complete Button */}
-            {!allTodaysPrayersComplete && (
-              <Button
-                onClick={handleMarkAllComplete}
-                className="w-full"
-                variant="default"
-              >
+            {!allTodaysPrayersComplete && <Button onClick={handleMarkAllComplete} className="w-full" variant="default">
                 Mark all as prayed for today
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
+              </Button>}
+          </div> : <div className="text-center py-8 text-muted-foreground">
             <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p className="text-lg font-medium mb-2">No prayers scheduled for today</p>
-            <button 
-              onClick={onOpenPrayerManager}
-              className="text-sm text-primary hover:text-primary/80 hover:underline cursor-pointer"
-            >
+            <button onClick={onOpenPrayerManager} className="text-sm text-primary hover:text-primary/80 hover:underline cursor-pointer">
               Add a person to pray for today
             </button>
-          </div>
-        )}
+          </div>}
 
         {/* Today's Prayer Completions Summary */}
-        {todaysCompletions.length > 0 && (
-          <div className="border-t pt-4">
+        {todaysCompletions.length > 0 && <div className="border-t pt-4">
             <h4 className="font-medium mb-3">Completed Prayers Today</h4>
             <div className="space-y-2">
-              {todaysCompletions.map((completion) => (
-                <div key={completion.id} className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
+              {todaysCompletions.map(completion => <div key={completion.id} className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                     <span className="text-sm font-medium text-green-800">{completion.person_name}</span>
                   </div>
-                  {completion.notes && (
-                    <span className="text-xs text-green-600 italic">{completion.notes}</span>
-                  )}
-                </div>
-              ))}
+                  {completion.notes && <span className="text-xs text-green-600 italic">{completion.notes}</span>}
+                </div>)}
             </div>
-          </div>
-        )}
+          </div>}
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
