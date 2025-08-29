@@ -21,7 +21,8 @@ export const usePrayerTracking = () => {
 
   useEffect(() => {
     if (user) {
-      loadPrayerCompletions();
+      // Add a small delay to ensure schema is ready
+      setTimeout(() => loadPrayerCompletions(), 500);
     } else {
       setLoading(false);
     }
@@ -31,17 +32,33 @@ export const usePrayerTracking = () => {
     if (!user) return;
 
     try {
+      console.log('Loading prayer completions...');
       const { data, error } = await supabase
         .from('prayer_completions')
         .select('*')
         .eq('user_id', user.id)
         .order('completion_date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading prayer completions:', error);
+        // Handle schema cache issue with retry
+        if (error.code === 'PGRST205') {
+          console.log('Schema cache error, retrying in 3 seconds...');
+          toast({
+            title: 'Initializing',
+            description: 'Prayer tracking is loading, please wait...',
+            variant: 'default'
+          });
+          setTimeout(() => loadPrayerCompletions(), 3000);
+          return;
+        }
+        throw error;
+      }
+
+      console.log('Successfully loaded prayer completions:', data);
       setPrayerCompletions(data || []);
     } catch (error) {
       console.error('Error loading prayer completions:', error);
-      setPrayerCompletions([]);
       toast({
         title: 'Error',
         description: 'Failed to load prayer completions',
@@ -65,15 +82,31 @@ export const usePrayerTracking = () => {
     try {
       if (existingCompletion) {
         // Remove completion
+        console.log('Removing prayer completion for:', personName);
         const { error } = await supabase
           .from('prayer_completions')
           .delete()
           .eq('id', existingCompletion.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error deleting prayer completion:', error);
+          if (error.code === 'PGRST205') {
+            toast({
+              title: 'Schema Loading',
+              description: 'Prayer tracking is initializing, please try again in a moment',
+              variant: 'default'
+            });
+            setTimeout(() => loadPrayerCompletions(), 2000);
+            return;
+          }
+          throw error;
+        }
+
+        console.log('Successfully deleted prayer completion');
         setPrayerCompletions(prev => prev.filter(c => c.id !== existingCompletion.id));
       } else {
         // Add completion
+        console.log('Adding new prayer completion for:', personName);
         const { data, error } = await supabase
           .from('prayer_completions')
           .insert({
@@ -85,7 +118,21 @@ export const usePrayerTracking = () => {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error adding prayer completion:', error);
+          if (error.code === 'PGRST205') {
+            toast({
+              title: 'Schema Loading',
+              description: 'Prayer tracking is initializing, please try again in a moment',
+              variant: 'default'
+            });
+            setTimeout(() => loadPrayerCompletions(), 2000);
+            return;
+          }
+          throw error;
+        }
+
+        console.log('Successfully added prayer completion:', data);
         setPrayerCompletions(prev => [data, ...prev]);
       }
     } catch (error) {
