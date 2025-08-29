@@ -76,41 +76,6 @@ export const HabitCard = ({
             {completed ? 'COMPLETED' : 'PENDING'}
           </span>
         </div>
-        
-        <div className="space-y-3">
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggle();
-            }}
-            variant={completed ? "default" : "outline"}
-            className={`w-full h-12 rounded-lg transition-all duration-300 font-semibold ${
-              completed 
-                ? 'bg-primary text-primary-foreground shadow-md' 
-                : 'hover:bg-primary hover:text-primary-foreground'
-            }`}
-          >
-            {completed ? (
-              <><Check className="h-4 w-4 mr-2" /> Completed</>
-            ) : (
-              <><Plus className="h-4 w-4 mr-2" /> {getActionText()}</>
-            )}
-          </Button>
-          
-          {(getSecondaryAction() || onAction) && (
-            <Button
-              variant="ghost"
-              className="w-full h-10 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAction?.();
-              }}
-            >
-              {actionIcon && <span className="mr-2">{actionIcon}</span>}
-              {actionLabel || getSecondaryAction()}
-            </Button>
-          )}
-        </div>
       </CardContent>
     </Card>
   );

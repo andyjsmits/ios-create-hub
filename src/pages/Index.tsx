@@ -6,21 +6,19 @@ import { PrayerManager } from "@/components/PrayerManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useHabits, PrayerPerson } from "@/hooks/useHabits";
-import { useHabitTracking } from "@/hooks/useHabitTracking";
 import { MessageCircle, Book, Ear, HandHeart, Volume2, Settings } from "lucide-react";
 import p2cLogo from "@/assets/p2c-students-logos.png";
 
 const Index = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
+  
+  // Get habit data for all habits
   const { habitData: prayHabitData, loading: prayLoading, updatePrayerList } = useHabits('pray');
-  const { 
-    isHabitCompletedToday, 
-    toggleHabitCompletion, 
-    calculateStreak, 
-    calculateWeeklyProgress,
-    loading: trackingLoading 
-  } = useHabitTracking();
+  const { habitData: unionHabitData, loading: unionLoading } = useHabits('union');
+  const { habitData: listenHabitData, loading: listenLoading } = useHabits('listen');
+  const { habitData: serveHabitData, loading: serveLoading } = useHabits('serve');
+  const { habitData: echoHabitData, loading: echoLoading } = useHabits('echo');
 
   const [showPrayerManager, setShowPrayerManager] = useState(false);
 
@@ -33,7 +31,9 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
-  if (loading || prayLoading || trackingLoading) {
+  const allLoading = loading || prayLoading || unionLoading || listenLoading || serveLoading || echoLoading;
+
+  if (allLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -48,6 +48,83 @@ const Index = () => {
     return null;
   }
 
+  // Helper function to check if habit is completed today
+  const isHabitCompletedToday = (habitData: any): boolean => {
+    if (!habitData?.trackingHistory) return false;
+    const today = new Date().toISOString().split('T')[0];
+    return habitData.trackingHistory.some((entry: any) => 
+      entry.date === today && entry.completed
+    );
+  };
+
+  // Calculate streak from all habits
+  const calculateStreak = (): number => {
+    const allHabits = [prayHabitData, unionHabitData, listenHabitData, serveHabitData, echoHabitData];
+    const allCompletions: { date: string; completed: boolean }[] = [];
+    
+    // Collect all completions from all habits
+    allHabits.forEach(habitData => {
+      if (habitData?.trackingHistory) {
+        allCompletions.push(...habitData.trackingHistory);
+      }
+    });
+
+    if (allCompletions.length === 0) return 0;
+
+    // Get unique dates where any habit was completed
+    const completionDates = Array.from(new Set(
+      allCompletions.filter(c => c.completed).map(c => c.date)
+    )).sort().reverse();
+
+    let streak = 0;
+    let currentDate = new Date();
+    
+    for (const dateStr of completionDates) {
+      const completionDate = new Date(dateStr);
+      const daysDiff = Math.floor((currentDate.getTime() - completionDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff === streak) {
+        streak++;
+        currentDate = new Date(completionDate);
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  };
+
+  // Calculate weekly progress from all habits
+  const calculateWeeklyProgress = (): { completed: boolean; habitsCounted: Set<string> } => {
+    const today = new Date();
+    const mondayOfWeek = new Date(today);
+    mondayOfWeek.setDate(today.getDate() - today.getDay() + 1);
+    const mondayStr = mondayOfWeek.toISOString().split('T')[0];
+    
+    const sundayOfWeek = new Date(mondayOfWeek);
+    sundayOfWeek.setDate(mondayOfWeek.getDate() + 6);
+    const sundayStr = sundayOfWeek.toISOString().split('T')[0];
+
+    const habitTypes = ['pray', 'union', 'listen', 'serve', 'echo'];
+    const allHabits = [prayHabitData, unionHabitData, listenHabitData, serveHabitData, echoHabitData];
+    const habitsCounted = new Set<string>();
+
+    habitTypes.forEach((habitType, index) => {
+      const habitData = allHabits[index];
+      if (habitData?.trackingHistory) {
+        const hasCompletionThisWeek = habitData.trackingHistory.some((entry: any) => 
+          entry.completed && entry.date >= mondayStr && entry.date <= sundayStr
+        );
+        if (hasCompletionThisWeek) {
+          habitsCounted.add(habitType);
+        }
+      }
+    });
+
+    const completed = habitTypes.every(habit => habitsCounted.has(habit));
+    return { completed, habitsCounted };
+  };
+
   const pulseHabits = {
     pray: {
       title: "Pray",
@@ -57,7 +134,8 @@ const Index = () => {
       gradient: "var(--gradient-yellow)",
       details: prayerList.length > 0 
         ? `Praying for: ${prayerList.map(p => p.name).join(', ')}`
-        : "Set up your prayer list to get started"
+        : "Set up your prayer list to get started",
+      completed: isHabitCompletedToday(prayHabitData)
     },
     union: {
       title: "Union",
@@ -65,7 +143,8 @@ const Index = () => {
       icon: <Book className="h-6 w-6 text-white" />,
       type: "bible" as const,
       gradient: "var(--gradient-blue)",
-      details: "Daily Bible reading and reflection with God"
+      details: "Daily Bible reading and reflection with God",
+      completed: isHabitCompletedToday(unionHabitData)
     },
     listen: {
       title: "Listen",
@@ -73,7 +152,8 @@ const Index = () => {
       icon: <Ear className="h-6 w-6 text-white" />,
       type: "conversation" as const,
       gradient: "var(--gradient-purple)",
-      details: "Listening is a way of loving people"
+      details: "Listening is a way of loving people",
+      completed: isHabitCompletedToday(listenHabitData)
     },
     serve: {
       title: "Serve",
@@ -81,7 +161,8 @@ const Index = () => {
       icon: <HandHeart className="h-6 w-6 text-white" />,
       type: "service" as const,
       gradient: "var(--gradient-teal)",
-      details: "Track weekly acts of service"
+      details: "Track weekly acts of service",
+      completed: isHabitCompletedToday(serveHabitData)
     },
     echo: {
       title: "Echo",
@@ -89,20 +170,9 @@ const Index = () => {
       icon: <Volume2 className="h-6 w-6 text-white" />,
       type: "testimony" as const,
       gradient: "var(--gradient-orange)",
-      details: "Give voice to God's goodness and character"
+      details: "Give voice to God's goodness and character",
+      completed: isHabitCompletedToday(echoHabitData)
     }
-  };
-
-  const toggleHabit = async (area: keyof typeof pulseHabits) => {
-    if (area === 'pray') {
-      // If prayer list is empty, open prayer manager instead of toggling
-      if (prayerList.length === 0) {
-        setShowPrayerManager(true);
-        return;
-      }
-    }
-    
-    await toggleHabitCompletion(area);
   };
 
   const handleHabitNavigation = (habitKey: string) => {
@@ -126,9 +196,7 @@ const Index = () => {
 
   // Calculate stats from real data
   const totalHabits = Object.keys(pulseHabits).length;
-  const todayCompletions = Object.keys(pulseHabits).filter(habit => 
-    isHabitCompletedToday(habit as 'pray' | 'union' | 'listen' | 'serve' | 'echo')
-  ).length;
+  const todayCompletions = Object.values(pulseHabits).filter(habit => habit.completed).length;
   const streak = calculateStreak();
   const weeklyProgress = calculateWeeklyProgress();
   const weeklyGoalMet = weeklyProgress.completed;
@@ -186,11 +254,8 @@ const Index = () => {
               description={habitConfig.description}
               icon={habitConfig.icon}
               type={habitConfig.type}
-              completed={isHabitCompletedToday(key as 'pray' | 'union' | 'listen' | 'serve' | 'echo')}
-              onToggle={() => toggleHabit(key as keyof typeof pulseHabits)}
-              onAction={key === 'pray' ? handlePrayerAction : undefined}
-              actionLabel={key === 'pray' ? 'Manage Prayer List' : undefined}
-              actionIcon={key === 'pray' ? <Settings className="h-4 w-4" /> : undefined}
+              completed={habitConfig.completed}
+              onToggle={() => {}} // Remove toggle functionality
               onNavigate={() => handleHabitNavigation(key)}
               gradient={habitConfig.gradient}
               details={habitConfig.details}
