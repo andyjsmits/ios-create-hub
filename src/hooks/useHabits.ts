@@ -14,6 +14,7 @@ export interface PrayerPerson {
   name: string;
   cadence: 'daily' | 'weekly';
   notificationTime?: string;
+  dayOfWeek?: number; // 0 = Sunday, 1 = Monday, etc. (for weekly prayers)
 }
 
 export interface ResourceItem {

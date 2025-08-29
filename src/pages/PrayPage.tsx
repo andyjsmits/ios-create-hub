@@ -10,7 +10,9 @@ import { ArrowLeft, MessageCircle, Plus, Trash2, ExternalLink, Calendar } from "
 import { useToast } from "@/hooks/use-toast";
 import { useHabits, ResourceItem } from "@/hooks/useHabits";
 import { useAuth } from "@/hooks/useAuth";
+import { useHabitTracking } from "@/hooks/useHabitTracking";
 import { PrayerManager } from "@/components/PrayerManager";
+import { PrayerTracker } from "@/components/PrayerTracker";
 const PrayPage = () => {
   const navigate = useNavigate();
   const {
@@ -25,6 +27,7 @@ const PrayPage = () => {
     updateResources,
     updatePrayerList
   } = useHabits('pray');
+  const { toggleHabitCompletion, isHabitCompletedToday } = useHabitTracking();
   const [showPrayerManager, setShowPrayerManager] = useState(false);
   const [newResource, setNewResource] = useState({
     title: '',
@@ -140,8 +143,15 @@ const PrayPage = () => {
       </div>
 
       <div className="container mx-auto px-6 py-12 max-w-4xl">
+        {/* Prayer Activity Tracker */}
+        <PrayerTracker 
+          prayerList={habitData.prayerList || []}
+          onToggleHabitCompletion={() => toggleHabitCompletion('pray')}
+          isHabitCompletedToday={isHabitCompletedToday('pray')}
+        />
+
         {/* About This Habit */}
-        <Card className="mb-8">
+        <Card className="my-8">
           <CardHeader>
             <CardTitle>About Prayer</CardTitle>
           </CardHeader>

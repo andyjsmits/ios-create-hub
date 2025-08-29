@@ -98,6 +98,36 @@ export type Database = {
         }
         Relationships: []
       }
+      prayer_completions: {
+        Row: {
+          completion_date: string
+          created_at: string
+          id: string
+          notes: string | null
+          person_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completion_date?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          person_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completion_date?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          person_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       prayer_notifications: {
         Row: {
           cadence: string

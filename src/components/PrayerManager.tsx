@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, MessageCircle, Clock } from "lucide-react";
+import { Trash2, Plus, MessageCircle, Clock, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { notificationService } from "@/services/notificationService";
 import { usePrayerNotifications } from "@/hooks/usePrayerNotifications";
@@ -21,6 +21,7 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
   const [newPersonName, setNewPersonName] = useState("");
   const [newPersonCadence, setNewPersonCadence] = useState<'daily' | 'weekly'>('daily');
   const [newPersonTime, setNewPersonTime] = useState("09:00");
+  const [newPersonDayOfWeek, setNewPersonDayOfWeek] = useState(0); // Sunday default
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const { toast } = useToast();
   const { scheduleNotification, cancelNotification } = usePrayerNotifications();
@@ -72,7 +73,8 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
       id: Date.now().toString(),
       name: newPersonName.trim(),
       cadence: newPersonCadence,
-      notificationTime: newPersonTime
+      notificationTime: newPersonTime,
+      dayOfWeek: newPersonCadence === 'weekly' ? newPersonDayOfWeek : undefined
     };
 
     onUpdatePrayerList([...prayerList, newPerson]);
@@ -85,6 +87,7 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     setNewPersonName("");
     setNewPersonCadence('daily');
     setNewPersonTime("09:00");
+    setNewPersonDayOfWeek(0);
     
     toast({
       title: "Person added",
@@ -108,7 +111,11 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
 
   const updateCadence = async (id: string, cadence: 'daily' | 'weekly') => {
     const updatedList = prayerList.map(person => 
-      person.id === id ? { ...person, cadence } : person
+      person.id === id ? { 
+        ...person, 
+        cadence,
+        dayOfWeek: cadence === 'weekly' ? (person.dayOfWeek || 0) : undefined
+      } : person
     );
     onUpdatePrayerList(updatedList);
     
@@ -119,6 +126,13 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
         await scheduleNotification(person.name, cadence, person.notificationTime);
       }
     }
+  };
+
+  const updateDayOfWeek = (id: string, dayOfWeek: number) => {
+    const updatedList = prayerList.map(person => 
+      person.id === id ? { ...person, dayOfWeek } : person
+    );
+    onUpdatePrayerList(updatedList);
   };
 
 
@@ -152,7 +166,7 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="person-name">Name</Label>
               <Input
@@ -175,6 +189,25 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
                 </SelectContent>
               </Select>
             </div>
+            {newPersonCadence === 'weekly' && (
+              <div>
+                <Label htmlFor="prayer-day">Prayer Day</Label>
+                <Select value={newPersonDayOfWeek.toString()} onValueChange={(value) => setNewPersonDayOfWeek(parseInt(value))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Sunday</SelectItem>
+                    <SelectItem value="1">Monday</SelectItem>
+                    <SelectItem value="2">Tuesday</SelectItem>
+                    <SelectItem value="3">Wednesday</SelectItem>
+                    <SelectItem value="4">Thursday</SelectItem>
+                    <SelectItem value="5">Friday</SelectItem>
+                    <SelectItem value="6">Saturday</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label htmlFor="reminder-time">Reminder Time</Label>
               <Input
@@ -229,6 +262,12 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
                         <Badge variant={person.cadence === 'daily' ? 'default' : 'secondary'}>
                           {person.cadence === 'daily' ? 'Daily' : 'Weekly'} reminders
                         </Badge>
+                        {person.cadence === 'weekly' && person.dayOfWeek !== undefined && (
+                          <Badge variant="outline">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][person.dayOfWeek]}
+                          </Badge>
+                        )}
                         {person.notificationTime && (
                           <Badge variant="outline">
                             <Clock className="h-3 w-3 mr-1" />
@@ -252,6 +291,26 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
                         <SelectItem value="weekly">Weekly</SelectItem>
                       </SelectContent>
                     </Select>
+                    
+                    {person.cadence === 'weekly' && (
+                      <Select 
+                        value={(person.dayOfWeek || 0).toString()} 
+                        onValueChange={(value) => updateDayOfWeek(person.id, parseInt(value))}
+                      >
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Sun</SelectItem>
+                          <SelectItem value="1">Mon</SelectItem>
+                          <SelectItem value="2">Tue</SelectItem>
+                          <SelectItem value="3">Wed</SelectItem>
+                          <SelectItem value="4">Thu</SelectItem>
+                          <SelectItem value="5">Fri</SelectItem>
+                          <SelectItem value="6">Sat</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                     
                     <Button
                       variant="ghost"
