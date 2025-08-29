@@ -193,36 +193,7 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Add New Resource */}
-            <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
-              <h4 className="font-medium">P2C Articles</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="title">Title</Label>
-                  <Input id="title" value={newResource.title} onChange={e => setNewResource({
-                  ...newResource,
-                  title: e.target.value
-                })} placeholder="Resource title" />
-                </div>
-                <div>
-                  <Label htmlFor="url">URL</Label>
-                  <Input id="url" value={newResource.url} onChange={e => setNewResource({
-                  ...newResource,
-                  url: e.target.value
-                })} placeholder="https://..." />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="description">Description (optional)</Label>
-                <Input id="description" value={newResource.description} onChange={e => setNewResource({
-                ...newResource,
-                description: e.target.value
-              })} placeholder="Brief description" />
-              </div>
-              <Button onClick={addResource} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Resource
-              </Button>
-            </div>
+            
 
             {/* Resource List */}
             <div className="space-y-3">
