@@ -31,6 +31,9 @@ export const usePrayerTracking = () => {
     if (!user) return;
 
     try {
+      // Add a small delay to ensure schema cache has time to refresh
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       const { data, error } = await supabase
         .from('prayer_completions')
         .select('*')
@@ -40,9 +43,8 @@ export const usePrayerTracking = () => {
       if (error) {
         // Handle schema cache issue gracefully
         if (error.code === 'PGRST205') {
-          console.warn('Schema cache not refreshed yet, using empty data');
-          setPrayerCompletions([]);
-          setLoading(false);
+          console.warn('Schema cache not refreshed yet, retrying in 3 seconds...');
+          setTimeout(() => loadPrayerCompletions(), 3000);
           return;
         }
         throw error;

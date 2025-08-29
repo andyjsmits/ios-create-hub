@@ -30,6 +30,9 @@ export const useHabitTracking = () => {
     if (!user) return;
 
     try {
+      // Add a small delay to ensure schema cache has time to refresh
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       const { data, error } = await supabase
         .from('habit_completions')
         .select('*')
@@ -39,9 +42,8 @@ export const useHabitTracking = () => {
       if (error) {
         // Handle schema cache issue gracefully
         if (error.code === 'PGRST205') {
-          console.warn('Schema cache not refreshed yet, using empty data');
-          setCompletions([]);
-          setLoading(false);
+          console.warn('Schema cache not refreshed yet, retrying in 3 seconds...');
+          setTimeout(() => loadCompletions(), 3000);
           return;
         }
         throw error;
