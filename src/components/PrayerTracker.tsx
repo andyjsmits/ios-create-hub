@@ -118,7 +118,7 @@ export const PrayerTracker = ({
         {todaysPrayerList.length > 0 ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium">People to pray for today:</h4>
+              <h4 className="font-medium">Pray for:</h4>
               <Badge variant="outline">
                 {todaysPrayerList.filter(p => isPrayedForToday(p.name)).length}/{todaysPrayerList.length} completed
               </Badge>
