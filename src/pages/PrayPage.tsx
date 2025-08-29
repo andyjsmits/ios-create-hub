@@ -154,13 +154,7 @@ const PrayPage = () => {
       </div>
 
       <div className="container mx-auto px-6 py-12 max-w-4xl">
-        {/* Prayer Activity Tracker */}
-        <PrayerTracker 
-          prayerList={habitData.prayerList || []}
-          onToggleHabitCompletion={() => toggleHabitCompletion('pray')}
-          isHabitCompletedToday={isHabitCompletedToday('pray')}
-          onOpenPrayerManager={() => setShowPrayerManager(true)}
-        />
+        {/* Prayer Activity Tracker removed - user can manage individual prayer items instead */}
 
         {/* About This Habit */}
         <Card className="my-8">
