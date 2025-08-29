@@ -155,8 +155,23 @@ export const PrayerTracker = ({
                       variant={isPrayedFor ? "secondary" : "outline"}
                       size="sm"
                       onClick={() => handlePersonToggle(person.name)}
+                      className={`min-w-[120px] transition-all duration-200 ${
+                        isPrayedFor 
+                          ? 'bg-green-100 hover:bg-green-200 text-green-800 border-green-300' 
+                          : 'hover:bg-primary/5 hover:border-primary/50'
+                      }`}
                     >
-                      {isPrayedFor ? 'Prayed for' : 'Mark as prayed for'}
+                      {isPrayedFor ? (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span className="hidden sm:inline">Prayed for</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Circle className="h-4 w-4" />
+                          <span className="hidden sm:inline">Mark as prayed for</span>
+                        </div>
+                      )}
                     </Button>
                   </div>
                 );
