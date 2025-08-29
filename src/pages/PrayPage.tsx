@@ -181,11 +181,7 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
                   {habitData.prayerList && habitData.prayerList.length > 0 ? habitData.prayerList.map(person => person.name).join(', ') : "Click + to add people to pray for"}
                 </p>
               </div>
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <Plus className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <h3 className="font-semibold">Resources</h3>
-                <p className="text-sm text-muted-foreground">Tools and guides</p>
-              </div>
+              
             </div>
           </CardContent>
         </Card>
