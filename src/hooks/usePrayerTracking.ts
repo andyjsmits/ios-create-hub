@@ -81,7 +81,17 @@ export const usePrayerTracking = () => {
           .delete()
           .eq('id', existingCompletion.id);
 
-        if (error) throw error;
+        if (error) {
+          if (error.code === 'PGRST205') {
+            toast({
+              title: 'Info',
+              description: 'Prayer tracking is still loading, please try again in a moment',
+              variant: 'default'
+            });
+            return;
+          }
+          throw error;
+        }
 
         setPrayerCompletions(prev => prev.filter(c => c.id !== existingCompletion.id));
       } else {
@@ -97,7 +107,17 @@ export const usePrayerTracking = () => {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          if (error.code === 'PGRST205') {
+            toast({
+              title: 'Info',
+              description: 'Prayer tracking is still loading, please try again in a moment',
+              variant: 'default'
+            });
+            return;
+          }
+          throw error;
+        }
 
         setPrayerCompletions(prev => [data, ...prev]);
       }
