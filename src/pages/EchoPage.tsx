@@ -133,6 +133,31 @@ const EchoPage = () => {
               give voice to His story. Whether it's a big breakthrough or a small moment of grace, every 
               echo of God's goodness has the power to encourage others and point them toward Him.
             </p>
+            
+            {/* Examples Section */}
+            <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+              <h3 className="font-semibold mb-3 text-foreground">Ways to Echo God's Story:</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+                  <p className="text-muted-foreground">
+                    Share with a mentor, friend or small group about how the gospel is good news to you in your life right now.
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+                  <p className="text-muted-foreground">
+                    Share with a non-Christian one simple way that God's story is good news for you and them.
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+                  <p className="text-muted-foreground">
+                    Clearly share the gospel or an aspect of the gospel with a friend in a way that is relevant to their journey.
+                  </p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
