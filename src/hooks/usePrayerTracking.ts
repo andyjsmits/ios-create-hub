@@ -31,34 +31,21 @@ export const usePrayerTracking = () => {
     if (!user) return;
 
     try {
-      // Add a small delay to ensure schema cache has time to refresh
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       const { data, error } = await supabase
         .from('prayer_completions')
         .select('*')
         .eq('user_id', user.id)
         .order('completion_date', { ascending: false });
 
-      if (error) {
-        // Handle schema cache issue gracefully
-        if (error.code === 'PGRST205') {
-          console.warn('Schema cache not refreshed yet, retrying in 3 seconds...');
-          setTimeout(() => loadPrayerCompletions(), 3000);
-          return;
-        }
-        throw error;
-      }
-
+      if (error) throw error;
       setPrayerCompletions(data || []);
     } catch (error) {
       console.error('Error loading prayer completions:', error);
-      // Fallback to empty data instead of breaking the UI
       setPrayerCompletions([]);
       toast({
-        title: 'Info',
-        description: 'Prayer data is loading, please refresh the page in a moment',
-        variant: 'default'
+        title: 'Error',
+        description: 'Failed to load prayer completions',
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
@@ -83,18 +70,7 @@ export const usePrayerTracking = () => {
           .delete()
           .eq('id', existingCompletion.id);
 
-        if (error) {
-          if (error.code === 'PGRST205') {
-            toast({
-              title: 'Info',
-              description: 'Prayer tracking is still loading, please try again in a moment',
-              variant: 'default'
-            });
-            return;
-          }
-          throw error;
-        }
-
+        if (error) throw error;
         setPrayerCompletions(prev => prev.filter(c => c.id !== existingCompletion.id));
       } else {
         // Add completion
@@ -109,18 +85,7 @@ export const usePrayerTracking = () => {
           .select()
           .single();
 
-        if (error) {
-          if (error.code === 'PGRST205') {
-            toast({
-              title: 'Info',
-              description: 'Prayer tracking is still loading, please try again in a moment',
-              variant: 'default'
-            });
-            return;
-          }
-          throw error;
-        }
-
+        if (error) throw error;
         setPrayerCompletions(prev => [data, ...prev]);
       }
     } catch (error) {
