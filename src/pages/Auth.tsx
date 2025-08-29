@@ -106,7 +106,7 @@ const Auth = () => {
     try {
       // Use app custom URL scheme for mobile, fallback to web URL for browser
       const isNative = window.location.protocol === 'capacitor:';
-      const redirectTo = isNative ? 'app.smits.pulse://' : `${window.location.origin}/`;
+      const redirectTo = isNative ? 'app.smits.pulse://auth/callback' : `${window.location.origin}/auth`;
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
