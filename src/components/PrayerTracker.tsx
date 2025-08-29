@@ -13,12 +13,14 @@ interface PrayerTrackerProps {
   prayerList: PrayerPerson[];
   onToggleHabitCompletion: () => void;
   isHabitCompletedToday: boolean;
+  onOpenPrayerManager?: () => void;
 }
 
 export const PrayerTracker = ({ 
   prayerList, 
   onToggleHabitCompletion, 
-  isHabitCompletedToday 
+  isHabitCompletedToday,
+  onOpenPrayerManager
 }: PrayerTrackerProps) => {
   const [notes, setNotes] = useState('');
   const [selectedPeople, setSelectedPeople] = useState<Set<string>>(new Set());
@@ -199,12 +201,12 @@ export const PrayerTracker = ({
           <div className="text-center py-8 text-muted-foreground">
             <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p className="text-lg font-medium mb-2">No prayers scheduled for today</p>
-            <p className="text-sm">
-              {prayerList.length === 0 
-                ? "Add people to your prayer list to get started"
-                : "Your weekly prayer schedule doesn't include today"
-              }
-            </p>
+            <button 
+              onClick={onOpenPrayerManager}
+              className="text-sm text-primary hover:text-primary/80 hover:underline cursor-pointer"
+            >
+              Add a person to pray for today
+            </button>
           </div>
         )}
 

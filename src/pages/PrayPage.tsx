@@ -159,6 +159,7 @@ const PrayPage = () => {
           prayerList={habitData.prayerList || []}
           onToggleHabitCompletion={() => toggleHabitCompletion('pray')}
           isHabitCompletedToday={isHabitCompletedToday('pray')}
+          onOpenPrayerManager={() => setShowPrayerManager(true)}
         />
 
         {/* About This Habit */}
