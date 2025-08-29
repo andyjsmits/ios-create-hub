@@ -171,7 +171,7 @@ const ListenPage = () => {
                       id="weekly-goal"
                       type="number"
                       value={weeklyGoal}
-                      onChange={(e) => updateWeeklyGoal(parseInt(e.target.value) || 1)}
+                      readOnly
                       className="w-20 text-center"
                       min="1"
                     />
