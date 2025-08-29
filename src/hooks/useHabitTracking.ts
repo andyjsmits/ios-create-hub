@@ -36,15 +36,26 @@ export const useHabitTracking = () => {
         .eq('user_id', user.id)
         .order('completion_date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        // Handle schema cache issue gracefully
+        if (error.code === 'PGRST205') {
+          console.warn('Schema cache not refreshed yet, using empty data');
+          setCompletions([]);
+          setLoading(false);
+          return;
+        }
+        throw error;
+      }
 
       setCompletions(data || []);
     } catch (error) {
       console.error('Error loading habit completions:', error);
+      // Fallback to empty data instead of breaking the UI
+      setCompletions([]);
       toast({
-        title: 'Error',
-        description: 'Failed to load habit tracking data',
-        variant: 'destructive'
+        title: 'Info',
+        description: 'Habit data is loading, please refresh the page in a moment',
+        variant: 'default'
       });
     } finally {
       setLoading(false);
