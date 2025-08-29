@@ -12,9 +12,8 @@ export interface HabitData {
 export interface PrayerPerson {
   id: string;
   name: string;
-  cadence: 'daily' | 'weekly';
+  daysOfWeek: number[]; // Array of days: 0 = Sunday, 1 = Monday, etc.
   notificationTime?: string;
-  dayOfWeek?: number; // 0 = Sunday, 1 = Monday, etc. (for weekly prayers)
 }
 
 export interface ResourceItem {

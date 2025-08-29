@@ -3,13 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, MessageCircle, Clock, Calendar } from "lucide-react";
+import { Plus, Trash2, MessageCircle, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { notificationService } from "@/services/notificationService";
-import { usePrayerNotifications } from "@/hooks/usePrayerNotifications";
 import { PrayerPerson } from "@/hooks/useHabits";
+import { usePrayerNotifications } from "@/hooks/usePrayerNotifications";
+import { notificationService } from "@/services/notificationService";
 
 interface PrayerManagerProps {
   prayerList: PrayerPerson[];
@@ -18,53 +17,36 @@ interface PrayerManagerProps {
 }
 
 export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: PrayerManagerProps) => {
-  const [newPersonName, setNewPersonName] = useState("");
-  const [newPersonCadence, setNewPersonCadence] = useState<'daily' | 'weekly'>('daily');
-  const [newPersonTime, setNewPersonTime] = useState("09:00");
-  const [newPersonDayOfWeek, setNewPersonDayOfWeek] = useState(0); // Sunday default
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [newPersonName, setNewPersonName] = useState('');
+  const [newPersonTime, setNewPersonTime] = useState('09:00');
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const { toast } = useToast();
-  const { scheduleNotification, cancelNotification } = usePrayerNotifications();
 
-  useEffect(() => {
-    // Check and request notification permissions on component mount
-    const setupNotifications = async () => {
-      const hasPermission = await notificationService.requestPermissions();
-      setNotificationsEnabled(hasPermission);
-      
-      if (hasPermission) {
-        await notificationService.setupPushNotifications();
-        toast({
-          title: "Notifications enabled",
-          description: "You'll receive prayer reminders based on your schedule."
-        });
-      } else {
-        toast({
-          title: "Notifications disabled", 
-          description: "Enable notifications in your device settings to receive prayer reminders.",
-          variant: "destructive"
-        });
-      }
-    };
-
-    setupNotifications();
-  }, [toast]);
+  const daysOfWeek = [
+    { value: 0, label: 'Sunday', short: 'Sun' },
+    { value: 1, label: 'Monday', short: 'Mon' },
+    { value: 2, label: 'Tuesday', short: 'Tue' },
+    { value: 3, label: 'Wednesday', short: 'Wed' },
+    { value: 4, label: 'Thursday', short: 'Thu' },
+    { value: 5, label: 'Friday', short: 'Fri' },
+    { value: 6, label: 'Saturday', short: 'Sat' }
+  ];
 
   const addPerson = async () => {
     if (!newPersonName.trim()) {
       toast({
-        title: "Name required",
-        description: "Please enter a name to add to your prayer list.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Please enter a name',
+        variant: 'destructive'
       });
       return;
     }
 
-    if (prayerList.length >= 5) {
+    if (selectedDays.length === 0) {
       toast({
-        title: "Prayer list full",
-        description: "You can add up to 5 people to your prayer list.",
-        variant: "destructive"
+        title: 'Error', 
+        description: 'Please select at least one day to pray',
+        variant: 'destructive'
       });
       return;
     }
@@ -72,171 +54,138 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     const newPerson: PrayerPerson = {
       id: Date.now().toString(),
       name: newPersonName.trim(),
-      cadence: newPersonCadence,
-      notificationTime: newPersonTime,
-      dayOfWeek: newPersonCadence === 'weekly' ? newPersonDayOfWeek : undefined
+      daysOfWeek: selectedDays,
+      notificationTime: newPersonTime
     };
 
-    onUpdatePrayerList([...prayerList, newPerson]);
-    
-    // Schedule notification if enabled
-    if (notificationsEnabled && newPerson.notificationTime) {
-      await scheduleNotification(newPerson.name, newPerson.cadence, newPerson.notificationTime);
-    }
-    
-    setNewPersonName("");
-    setNewPersonCadence('daily');
-    setNewPersonTime("09:00");
-    setNewPersonDayOfWeek(0);
-    
+    const updatedList = [...prayerList, newPerson];
+    onUpdatePrayerList(updatedList);
+
+    // Note: Notification scheduling temporarily simplified
+
+    // Reset form
+    setNewPersonName('');
+    setSelectedDays([]);
+    setNewPersonTime('09:00');
+
     toast({
-      title: "Person added",
-      description: `${newPerson.name} has been added to your prayer list.`
+      title: 'Success',
+      description: `Added ${newPerson.name} to your prayer list`,
+      variant: 'default'
     });
   };
 
-  const removePerson = async (id: string) => {
-    const person = prayerList.find(p => p.id === id);
-    onUpdatePrayerList(prayerList.filter(p => p.id !== id));
-    
-    if (person) {
-      // Note: We'll need to track notification IDs separately or find by person name
-      // For now, we'll just remove from the prayer list
-      toast({
-        title: "Person removed",
-        description: `${person.name} has been removed from your prayer list.`
-      });
-    }
+  const removePerson = async (personToRemove: PrayerPerson) => {
+    const updatedList = prayerList.filter(person => person.id !== personToRemove.id);
+    onUpdatePrayerList(updatedList);
+
+    // Note: Notification cancellation temporarily simplified
+
+    toast({
+      title: 'Removed',
+      description: `Removed ${personToRemove.name} from your prayer list`,
+      variant: 'default'
+    });
   };
 
-  const updateCadence = async (id: string, cadence: 'daily' | 'weekly') => {
-    const updatedList = prayerList.map(person => 
-      person.id === id ? { 
-        ...person, 
-        cadence,
-        dayOfWeek: cadence === 'weekly' ? (person.dayOfWeek || 0) : undefined
-      } : person
-    );
-    onUpdatePrayerList(updatedList);
-    
-    // Reschedule notification with new cadence
-    if (notificationsEnabled) {
-      const person = updatedList.find(p => p.id === id);
-      if (person && person.notificationTime) {
-        await scheduleNotification(person.name, cadence, person.notificationTime);
+  const updatePersonDays = async (personId: string, newDays: number[]) => {
+    const updatedList = prayerList.map(person => {
+      if (person.id === personId) {
+        return { ...person, daysOfWeek: newDays };
       }
-    }
-  };
-
-  const updateDayOfWeek = (id: string, dayOfWeek: number) => {
-    const updatedList = prayerList.map(person => 
-      person.id === id ? { ...person, dayOfWeek } : person
-    );
+      return person;
+    });
     onUpdatePrayerList(updatedList);
+
+    // Note: Notification rescheduling temporarily simplified
   };
 
+  const toggleDay = (day: number) => {
+    setSelectedDays(prev => 
+      prev.includes(day) 
+        ? prev.filter(d => d !== day)
+        : [...prev, day].sort()
+    );
+  };
+
+  const togglePersonDay = (personId: string, day: number) => {
+    const person = prayerList.find(p => p.id === personId);
+    if (!person) return;
+
+    const newDays = person.daysOfWeek.includes(day)
+      ? person.daysOfWeek.filter(d => d !== day)
+      : [...person.daysOfWeek, day].sort();
+
+    updatePersonDays(personId, newDays);
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center pb-4 border-b">
-        <div className="inline-flex items-center gap-3 mb-4">
-          <div 
-            className="w-12 h-12 rounded-full flex items-center justify-center"
-            style={{ background: 'var(--gradient-yellow)' }}
-          >
-            <MessageCircle className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Prayer List</h2>
-            <p className="text-muted-foreground">Manage who you're praying for</p>
-          </div>
-        </div>
+      <div className="text-center">
+        <h2 className="text-2xl font-bold mb-2">Prayer List Manager</h2>
+        <p className="text-muted-foreground">Add people to pray for and select which days of the week to pray for them</p>
       </div>
 
-      {/* Add New Person */}
+      {/* Add New Person Form */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Add Someone to Pray For
-          </CardTitle>
-          <p className="text-sm text-muted-foreground italic">
-            Feel free to use nicknames or first names to keep things confidential.
-          </p>
+          <CardTitle>Add New Person</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="person-name">Name</Label>
-              <Input
-                id="person-name"
-                placeholder="Enter their name"
-                value={newPersonName}
-                onChange={(e) => setNewPersonName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addPerson()}
-              />
+          <div>
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              value={newPersonName}
+              onChange={(e) => setNewPersonName(e.target.value)}
+              placeholder="Enter person's name"
+            />
+          </div>
+
+          <div>
+            <Label>Days to pray</Label>
+            <div className="grid grid-cols-7 gap-2 mt-2">
+              {daysOfWeek.map((day) => (
+                <Button
+                  key={day.value}
+                  type="button"
+                  variant={selectedDays.includes(day.value) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => toggleDay(day.value)}
+                  className="text-xs"
+                >
+                  {day.short}
+                </Button>
+              ))}
             </div>
-            <div>
-              <Label htmlFor="reminder-cadence">Reminder Frequency</Label>
-              <Select value={newPersonCadence} onValueChange={(value: 'daily' | 'weekly') => setNewPersonCadence(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {newPersonCadence === 'weekly' && (
-              <div>
-                <Label htmlFor="prayer-day">Prayer Day</Label>
-                <Select value={newPersonDayOfWeek.toString()} onValueChange={(value) => setNewPersonDayOfWeek(parseInt(value))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">Sunday</SelectItem>
-                    <SelectItem value="1">Monday</SelectItem>
-                    <SelectItem value="2">Tuesday</SelectItem>
-                    <SelectItem value="3">Wednesday</SelectItem>
-                    <SelectItem value="4">Thursday</SelectItem>
-                    <SelectItem value="5">Friday</SelectItem>
-                    <SelectItem value="6">Saturday</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            {selectedDays.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Selected: {selectedDays.map(day => daysOfWeek[day].label).join(', ')}
+              </p>
             )}
-            <div>
-              <Label htmlFor="reminder-time">Reminder Time</Label>
-              <Input
-                id="reminder-time"
-                type="time"
-                value={newPersonTime}
-                onChange={(e) => setNewPersonTime(e.target.value)}
-              />
+          </div>
+
+          <div>
+            <Label htmlFor="time">Reminder time</Label>
+            <Input
+              id="time"
+              type="time"
+              value={newPersonTime}
+              onChange={(e) => setNewPersonTime(e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <div className="text-sm">
+              <p className="text-yellow-800 font-medium">Notifications disabled</p>
+              <p className="text-yellow-700">Enable notifications to get prayer reminders</p>
             </div>
           </div>
-          
-          {!notificationsEnabled && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-amber-800">
-                <Clock className="h-4 w-4" />
-                <span className="text-sm font-medium">
-                  Enable notifications in your device settings to receive prayer reminders
-                </span>
-              </div>
-            </div>
-          )}
-          
-          <Button 
-            onClick={addPerson} 
-            className="w-full"
-            disabled={prayerList.length >= 5}
-          >
+
+          <Button onClick={addPerson} className="w-full">
             <Plus className="h-4 w-4 mr-2" />
-            Add to Prayer List ({prayerList.length}/5)
+            Add to Prayer List
           </Button>
         </CardContent>
       </Card>
@@ -245,82 +194,52 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
       {prayerList.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Your Prayer List</CardTitle>
+            <CardTitle>Your Prayer List ({prayerList.length} people)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {prayerList.map((person) => (
-                <div 
-                  key={person.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary"></div>
-                    <div>
-                      <p className="font-medium text-foreground">{person.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant={person.cadence === 'daily' ? 'default' : 'secondary'}>
-                          {person.cadence === 'daily' ? 'Daily' : 'Weekly'} reminders
-                        </Badge>
-                        {person.cadence === 'weekly' && person.dayOfWeek !== undefined && (
-                          <Badge variant="outline">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][person.dayOfWeek]}
-                          </Badge>
-                        )}
-                        {person.notificationTime && (
-                          <Badge variant="outline">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {person.notificationTime}
-                          </Badge>
-                        )}
+                <div key={person.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h4 className="font-medium">{person.name}</h4>
+                      <Badge variant="outline" className="text-xs">
+                        {person.notificationTime}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-sm">Days to pray:</Label>
+                      <div className="grid grid-cols-7 gap-1">
+                        {daysOfWeek.map((day) => (
+                          <Button
+                            key={day.value}
+                            type="button"
+                            variant={person.daysOfWeek.includes(day.value) ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => togglePersonDay(person.id, day.value)}
+                            className="text-xs p-1 h-8"
+                          >
+                            {day.short}
+                          </Button>
+                        ))}
                       </div>
+                      {person.daysOfWeek.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {person.daysOfWeek.map(day => daysOfWeek[day].label).join(', ')}
+                        </p>
+                      )}
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Select 
-                      value={person.cadence} 
-                      onValueChange={(value: 'daily' | 'weekly') => updateCadence(person.id, value)}
-                    >
-                      <SelectTrigger className="w-24">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    {person.cadence === 'weekly' && (
-                      <Select 
-                        value={(person.dayOfWeek || 0).toString()} 
-                        onValueChange={(value) => updateDayOfWeek(person.id, parseInt(value))}
-                      >
-                        <SelectTrigger className="w-20">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">Sun</SelectItem>
-                          <SelectItem value="1">Mon</SelectItem>
-                          <SelectItem value="2">Tue</SelectItem>
-                          <SelectItem value="3">Wed</SelectItem>
-                          <SelectItem value="4">Thu</SelectItem>
-                          <SelectItem value="5">Fri</SelectItem>
-                          <SelectItem value="6">Sat</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removePerson(person.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removePerson(person)}
+                    className="text-destructive hover:text-destructive ml-4"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
