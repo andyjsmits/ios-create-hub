@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, MessageCircle, AlertTriangle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash2, MessageCircle, Bell, BellOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PrayerPerson } from "@/hooks/useHabits";
 import { usePrayerNotifications } from "@/hooks/usePrayerNotifications";
@@ -20,7 +21,23 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
   const [newPersonName, setNewPersonName] = useState('');
   const [newPersonTime, setNewPersonTime] = useState('09:00');
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [hasNotificationPermission, setHasNotificationPermission] = useState(false);
   const { toast } = useToast();
+  const { scheduleNotification, cancelNotification, notifications } = usePrayerNotifications();
+
+  useEffect(() => {
+    checkNotificationPermission();
+  }, []);
+
+  const checkNotificationPermission = async () => {
+    try {
+      const permission = await notificationService.requestPermissions();
+      setHasNotificationPermission(permission);
+    } catch (error) {
+      console.error('Error checking notification permission:', error);
+      setHasNotificationPermission(false);
+    }
+  };
 
   const daysOfWeek = [
     { value: 0, label: 'Sunday', short: 'Sun' },
@@ -61,8 +78,6 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     const updatedList = [...prayerList, newPerson];
     onUpdatePrayerList(updatedList);
 
-    // Note: Notification scheduling temporarily simplified
-
     // Reset form
     setNewPersonName('');
     setSelectedDays([]);
@@ -76,10 +91,14 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
   };
 
   const removePerson = async (personToRemove: PrayerPerson) => {
+    // Cancel any existing notifications for this person
+    const existingNotification = notifications.find(n => n.person_name === personToRemove.name);
+    if (existingNotification) {
+      await cancelNotification(existingNotification.id);
+    }
+
     const updatedList = prayerList.filter(person => person.id !== personToRemove.id);
     onUpdatePrayerList(updatedList);
-
-    // Note: Notification cancellation temporarily simplified
 
     toast({
       title: 'Removed',
@@ -96,8 +115,36 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
       return person;
     });
     onUpdatePrayerList(updatedList);
+  };
 
-    // Note: Notification rescheduling temporarily simplified
+  const toggleNotification = async (person: PrayerPerson) => {
+    if (!hasNotificationPermission) {
+      const permission = await notificationService.requestPermissions();
+      if (!permission) {
+        toast({
+          title: 'Permission needed',
+          description: 'Please enable notifications to set prayer reminders',
+          variant: 'destructive'
+        });
+        return;
+      }
+      setHasNotificationPermission(true);
+    }
+
+    const existingNotification = notifications.find(n => n.person_name === person.name);
+    
+    if (existingNotification) {
+      // Cancel existing notification
+      await cancelNotification(existingNotification.id);
+    } else {
+      // Schedule new notification - determine cadence based on days
+      const cadence = person.daysOfWeek && person.daysOfWeek.length === 7 ? 'daily' : 'weekly';
+      await scheduleNotification(person.name, cadence, person.notificationTime || '09:00');
+    }
+  };
+
+  const hasNotification = (personName: string) => {
+    return notifications.some(n => n.person_name === personName);
   };
 
   const toggleDay = (day: number) => {
@@ -177,13 +224,15 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
             />
           </div>
 
-          <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-            <div className="text-sm">
-              <p className="text-yellow-800 font-medium">Notifications disabled</p>
-              <p className="text-yellow-700">Enable notifications to get prayer reminders</p>
+          {!hasNotificationPermission && (
+            <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <BellOff className="h-4 w-4 text-amber-600" />
+              <div className="text-sm">
+                <p className="text-amber-800 font-medium">Notifications disabled</p>
+                <p className="text-amber-700">Enable notifications to get prayer reminders</p>
+              </div>
             </div>
-          </div>
+          )}
 
           <Button onClick={addPerson} className="w-full">
             <Plus className="h-4 w-4 mr-2" />
@@ -205,9 +254,22 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h4 className="font-medium">{person.name}</h4>
-                      <Badge variant="outline" className="text-xs">
-                        {person.notificationTime}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {person.notificationTime}
+                        </Badge>
+                        <div className="flex items-center gap-2">
+                          {hasNotification(person.name) ? (
+                            <Bell className="h-3 w-3 text-primary" />
+                          ) : (
+                            <BellOff className="h-3 w-3 text-muted-foreground" />
+                          )}
+                          <Switch
+                            checked={hasNotification(person.name)}
+                            onCheckedChange={() => toggleNotification(person)}
+                          />
+                        </div>
+                      </div>
                     </div>
                     
                     <div className="space-y-2">
