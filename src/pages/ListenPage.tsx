@@ -83,7 +83,7 @@ const ListenPage = () => {
               LISTEN
             </h1>
             <p className="text-xl md:text-2xl font-medium max-w-3xl mx-auto leading-relaxed">
-              We journey with others as a learner
+              Listening is a way of loving and pursuing people
             </p>
           </div>
         </div>
