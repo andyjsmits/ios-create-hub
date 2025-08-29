@@ -227,6 +227,16 @@ const ListenPage = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Quote Box */}
+        <Card className="mt-8 bg-muted/30">
+          <CardContent className="py-8 px-6 text-center">
+            <blockquote className="text-lg md:text-xl font-medium italic text-muted-foreground leading-relaxed mb-4">
+              "Being heard is so close to being loved that for the average person, they are almost indistinguishable."
+            </blockquote>
+            <cite className="text-sm font-semibold text-primary">— David W. Augsburger</cite>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
