@@ -30,34 +30,21 @@ export const useHabitTracking = () => {
     if (!user) return;
 
     try {
-      // Add a small delay to ensure schema cache has time to refresh
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       const { data, error } = await supabase
         .from('habit_completions')
         .select('*')
         .eq('user_id', user.id)
         .order('completion_date', { ascending: false });
 
-      if (error) {
-        // Handle schema cache issue gracefully
-        if (error.code === 'PGRST205') {
-          console.warn('Schema cache not refreshed yet, retrying in 3 seconds...');
-          setTimeout(() => loadCompletions(), 3000);
-          return;
-        }
-        throw error;
-      }
-
+      if (error) throw error;
       setCompletions(data || []);
     } catch (error) {
       console.error('Error loading habit completions:', error);
-      // Fallback to empty data instead of breaking the UI
       setCompletions([]);
       toast({
-        title: 'Info',
-        description: 'Habit data is loading, please refresh the page in a moment',
-        variant: 'default'
+        title: 'Error',
+        description: 'Failed to load habit completions',
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
