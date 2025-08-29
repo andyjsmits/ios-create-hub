@@ -11,21 +11,14 @@ const config: CapacitorConfig = {
       sound: 'beep.wav',
     },
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 1500,
       launchAutoHide: true,
       backgroundColor: '#ffffff',
+      showSpinner: false,
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
-      showSpinner: false,
-      splashFullScreen: true,
-      splashImmersive: true,
+      splashImmersive: false,
     },
-  },
-  ios: {
-    icon: 'public/app-icon-1024.png',
-  },
-  android: {
-    icon: 'public/app-icon-512.png',
   },
 };
 
