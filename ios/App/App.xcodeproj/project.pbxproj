@@ -104,7 +104,7 @@
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
 			buildPhases = (
 				6634F4EFEBD30273BCE97C65 /* [CP] Check Pods Manifest.lock */,
-				8F4070902E625F6600E6CFB7 /* ShellScript */,
+				8F4070902E625F6600E6CFB7 /* Run Script */,
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
@@ -125,8 +125,9 @@
 		504EC2FC1FED79650016851F /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				BuildIndependentTargetsInParallel = YES;
 				LastSwiftUpdateCheck = 0920;
-				LastUpgradeCheck = 0920;
+				LastUpgradeCheck = 1640;
 				TargetAttributes = {
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
@@ -174,6 +175,7 @@
 /* Begin PBXShellScriptBuildPhase section */
 		6634F4EFEBD30273BCE97C65 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -190,7 +192,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		8F4070902E625F6600E6CFB7 /* ShellScript */ = {
+		8F4070902E625F6600E6CFB7 /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 12;
@@ -201,13 +203,14 @@
 			inputPaths = (
 				"$(SRCROOT)/package.json",
 			);
+			name = "Run Script";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "#!/bin/bash\nset -euxo pipefail\n\necho \"== Locate repo root ==\"\nROOT=\"$PROJECT_DIR\"\n# Walk up until we find package.json and a capacitor.config.* file\nwhile [ ! -f \"$ROOT/package.json\" ] || { [ ! -f \"$ROOT/capacitor.config.ts\" ] && [ ! -f \"$ROOT/capacitor.config.json\" ]; }; do\n  PARENT=\"$(dirname \"$ROOT\")\"\n  [ \"$PARENT\" = \"$ROOT\" ] && { echo \"Could not find repo root with package.json + capacitor.config.*\"; exit 1; }\n  ROOT=\"$PARENT\"\ndone\ncd \"$ROOT\"\necho \"Repo root: $ROOT\"\nls -la\n\n# Check if we already have the public folder (CI should have built it)\nif [ -d \"ios/App/App/public\" ] && [ \"$(ls -A ios/App/App/public 2>/dev/null)\" ]; then\n  echo \"== Web app already built and copied (CI script) ==\"\n  ls -la ios/App/App/public\n  echo \"Skipping build steps\"\n  exit 0\nfi\n\necho \"== Checking for existing web assets ==\"\n# Look for any existing built assets we can use\nif [ -d \"dist\" ] && [ \"$(ls -A dist 2>/dev/null)\" ]; then\n  echo \"Found existing dist folder, copying to iOS\"\n  mkdir -p ios/App/App/public\n  cp -r dist/* ios/App/App/public/\n  echo \"Web assets copied successfully\"\n  exit 0\nelif [ -d \"public\" ] && [ \"$(ls -A public 2>/dev/null)\" ]; then\n  echo \"Found public folder, copying to iOS as fallback\"\n  mkdir -p ios/App/App\n  cp -r public ios/App/App/\n  echo \"Public assets copied as fallback\"\n  exit 0\nfi\n\necho \"== Node deps ==\"\n# Check for different package managers\nif command -v bun >/dev/null 2>&1 && [ -f bun.lockb ]; then\n  echo \"Using Bun package manager\"\n  bun install\nelif command -v npm >/dev/null 2>&1; then\n  echo \"Using npm package manager\"\n  if [ -f package-lock.json ]; then\n    npm ci\n  else\n    npm install\n  fi\nelse\n  echo \"WARNING: No package manager found - this might be a CI environment issue\"\n  # In CI, we should have either built assets or working package managers\n  echo \"ERROR: Cannot build web assets - no package manager and no pre-built assets found\"\n  echo \"This suggests the CI post-clone script didn't run successfully\"\n  exit 1\nfi\n\necho \"== Sanity: Capacitor platforms ==\"\nif command -v bunx >/dev/null 2>&1; then\n  bunx cap ls\nelif command -v npx >/dev/null 2>&1; then\n  npx --yes cap ls\nelse\n  echo \"WARNING: Could not run cap ls - no runner available\"\nfi\n\necho \"== Build web and copy to iOS ==\"\nif command -v bun >/dev/null 2>&1; then\n  bun run build\n  bunx cap copy ios\nelif command -v npm >/dev/null 2>&1; then\n  npm run build\n  npx --yes cap copy ios\nelse\n  echo \"ERROR: No package manager available for build after dependency installation\"\n  exit 1\nfi\n\necho \"== Verify output ==\"\nls -la dist || true\nls -la ios/App/App || true\ntest -d ios/App/App/public || { echo \"ERROR: ios/App/App/public missing after build process\"; exit 1; }\necho \"Build script completed successfully\"\n";
+			shellScript = "#!/bin/bash\nset -euo pipefail\n\necho \"== Capacitor iOS Build Script ==\"\necho \"PROJECT_DIR: $PROJECT_DIR\"\n\n# Navigate to repo root\nROOT=\"$PROJECT_DIR\"\nwhile [ ! -f \"$ROOT/package.json\" ] || { [ ! -f \"$ROOT/capacitor.config.ts\" ] && [ ! -f \"$ROOT/capacitor.config.json\" ]; }; do\n  PARENT=\"$(dirname \"$ROOT\")\"\n  [ \"$PARENT\" = \"$ROOT\" ] && { echo \"Could not find repo root\"; exit 1; }\n  ROOT=\"$PARENT\"\ndone\ncd \"$ROOT\"\necho \"Repo root: $ROOT\"\n\n# Check if public folder already exists and has content\nif [ -d \"ios/App/App/public\" ] && [ \"$(ls -A ios/App/App/public 2>/dev/null)\" ]; then\n  echo \"Web app already built and available\"\n  echo \"Contents: $(ls ios/App/App/public | wc -l) files\"\n  exit 0\nfi\n\necho \"Building web app and copying to iOS...\"\n\n# Build only if we have tools available\nif command -v npm >/dev/null 2>&1; then\n  echo \"Using npm\"\n  if [ -f package-lock.json ]; then\n    npm ci\n  else\n    npm install\n  fi\n  npm run build\n  npx cap copy ios\nelif command -v bun >/dev/null 2>&1 && [ -f bun.lockb ]; then\n  echo \"Using bun\"\n  bun install\n  bun run build\n  bunx cap copy ios\nelse\n  echo \"No package manager available - checking for pre-built assets\"\n  if [ -d \"dist\" ]; then\n    echo \"Using existing dist folder\"\n    mkdir -p ios/App/App/public\n    cp -r dist/* ios/App/App/public/\n  else\n    echo \"ERROR: No way to build or copy web assets\"\n    exit 1\n  fi\nfi\n\necho \"Build completed successfully\"\n";
 		};
 		9592DBEFFC6D2A0C8D5DEB22 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -271,6 +274,7 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
@@ -278,8 +282,10 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -289,8 +295,10 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 63KBL92W2A;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -328,6 +336,7 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
@@ -335,8 +344,10 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -346,8 +357,10 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 63KBL92W2A;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -373,7 +386,6 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 63KBL92W2A;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "P2C Pulse";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -400,7 +412,6 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 63KBL92W2A;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "P2C Pulse";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
