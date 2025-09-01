@@ -14,6 +14,7 @@ import UnionPage from "./pages/UnionPage";
 import ListenPage from "./pages/ListenPage";
 import ServePage from "./pages/ServePage";
 import EchoPage from "./pages/EchoPage";
+import SupportPage from "./pages/SupportPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/habits/listen" element={<ListenPage />} />
               <Route path="/habits/serve" element={<ServePage />} />
               <Route path="/habits/echo" element={<EchoPage />} />
+              <Route path="/support" element={<SupportPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
