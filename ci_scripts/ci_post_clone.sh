@@ -1,94 +1,74 @@
-#!/bin/sh
-echo "=== Post-clone script starting ==="
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== Xcode Cloud post-clone (Capacitor) ==="
 echo "PWD: $(pwd)"
-echo "USER: $(whoami)"
 echo "PATH: $PATH"
 
-# Install Node.js and npm
-echo "=== Installing Node.js ==="
+# 0) Work from the repo root
+REPO_ROOT="${CI_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+cd "$REPO_ROOT"
+
+# 1) Find the web app directory (where package.json lives)
+WEB_DIR=""
+if [ -f "package.json" ]; then
+  WEB_DIR="$REPO_ROOT"
+else
+  for d in app frontend web ui client; do
+    if [ -f "$REPO_ROOT/$d/package.json" ]; then WEB_DIR="$REPO_ROOT/$d"; break; fi
+  done
+fi
+if [ -z "$WEB_DIR" ]; then
+  echo "ERROR: Could not find package.json. Update this script with the correct web app path."
+  exit 1
+fi
+echo "Web app dir: $WEB_DIR"
+cd "$WEB_DIR"
+
+# 2) Ensure Node without sudo (use nvm)
 if ! command -v node >/dev/null 2>&1; then
-    # For Xcode Cloud, install Node.js via Homebrew
-    echo "Installing Homebrew..."
-    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || echo "Homebrew installation failed, trying alternative..."
-    
-    # Add Homebrew to PATH for this session (both possible locations)
-    export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
-    eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv 2>/dev/null)" || true
-    
-    # Install Node.js
-    if command -v brew >/dev/null 2>&1; then
-        echo "Installing Node.js via Homebrew..."
-        brew install node
-        # Update PATH to include node
-        export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
-    else
-        # Fallback: install Node.js directly
-        echo "Installing Node.js via direct download..."
-        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-        nvm install --lts
-        nvm use --lts
-    fi
+  echo "Node not found; installing via nvm..."
+  curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+  # shellcheck disable=SC1090
+  . "${HOME}/.nvm/nvm.sh"
+  nvm install --lts
+  nvm use --lts
+fi
+node -v || true
+npm -v || true
+
+# 3) Enable Corepack (so yarn/pnpm work if lockfiles exist)
+corepack enable || true
+
+# 4) Install dependencies using the right manager
+if [ -f yarn.lock ]; then
+  echo "Using yarn"
+  corepack yarn --version
+  corepack yarn install --frozen-lockfile
+elif [ -f pnpm-lock.yaml ]; then
+  echo "Using pnpm"
+  corepack pnpm --version
+  corepack pnpm install --frozen-lockfile
 else
-    echo "Node.js already installed"
+  echo "Using npm"
+  npm ci
 fi
 
-# Verify installations
-echo "=== Verifying Node.js and npm ==="
-echo "Updated PATH: $PATH"
-node --version || echo "Node.js not found after installation"
-npm --version || echo "npm not found after installation"
-which node || echo "node location unknown"
-which npm || echo "npm location unknown"
-
-# Install dependencies
-echo "=== Installing npm dependencies ==="
-if command -v npm >/dev/null 2>&1; then
-    npm install || npm ci || echo "npm install failed"
+# 5) Build the web app
+if [ -f yarn.lock ]; then
+  corepack yarn build
+elif [ -f pnpm-lock.yaml ]; then
+  corepack pnpm build
 else
-    echo "ERROR: npm still not available after installation"
-    exit 1
+  npm run build
 fi
 
-# Build the web app
-echo "=== Building web app ==="
-if command -v npm >/dev/null 2>&1; then
-    npm run build || echo "Build failed"
-    echo "Checking if dist folder was created..."
-    ls -la dist/ || echo "No dist folder found after build"
-else
-    echo "ERROR: npm not available for build"
-    exit 1
-fi
+# 6) Sync Capacitor so iOS has the assets in ios/App/App/public
+cd "$REPO_ROOT"
+npx cap sync ios
 
-# Sync Capacitor
-echo "=== Syncing Capacitor ==="
-if command -v npx >/dev/null 2>&1; then
-    npx cap sync ios || echo "Capacitor sync failed"
-else
-    echo "ERROR: npx not available for Capacitor sync"
-fi
-
-# Copy files
-echo "=== Copying files to iOS directory ==="
-mkdir -p ios/App/App
-cp config.xml ios/App/App/ 2>/dev/null || echo "config.xml copy failed (may not exist)"
-cp capacitor.config.json ios/App/App/ 2>/dev/null || echo "capacitor.config.json copy failed (may not exist)"
-
-# Copy the built web app
-if [ -d "dist" ] && [ "$(ls -A dist 2>/dev/null)" ]; then
-    mkdir -p ios/App/App/public
-    cp -r dist/* ios/App/App/public/ && echo "Built app copied to public folder" || echo "Built app copy failed"
-    echo "Contents of ios/App/App/public:"
-    ls -la ios/App/App/public/ || echo "Could not list public folder contents"
-elif [ -d "public" ] && [ "$(ls -A public 2>/dev/null)" ]; then
-    cp -r public ios/App/App/ && echo "Public folder copied" || echo "Public folder copy failed"
-else
-    echo "ERROR: No dist or public folder found to copy"
-    exit 1
-fi
-
-echo "=== Verifying files in iOS directory ==="
-ls -la ios/App/App/ || echo "iOS App directory not accessible"
-echo "=== Post-clone script completed successfully ==="
+# 7) Verify assets landed where iOS expects them
+ASSETS_DIR="ios/App/App/public"
+echo "Contents of $ASSETS_DIR:"
+ls -la "$ASSETS_DIR"
+echo "=== Post-clone done ==="
