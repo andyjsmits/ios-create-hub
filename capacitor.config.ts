@@ -4,6 +4,9 @@ const config: CapacitorConfig = {
   appId: 'app.smits.pulse',
   appName: 'PULSE',
   webDir: 'dist',
+  server: {
+    androidScheme: 'https'
+  },
   plugins: {
     LocalNotifications: {
       smallIcon: 'ic_stat_icon_config_sample',
@@ -18,6 +21,12 @@ const config: CapacitorConfig = {
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
       splashImmersive: false,
+    },
+    App: {
+      appUrlOpen: {
+        iosCustomScheme: 'app.smits.pulse',
+        androidCustomScheme: 'app.smits.pulse'
+      }
     },
   },
 };
