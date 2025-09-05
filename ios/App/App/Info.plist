@@ -56,5 +56,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>PULSE sends you helpful reminders about your daily habits and spiritual practices to keep you on track with your goals.</string>
 </dict>
 </plist>
