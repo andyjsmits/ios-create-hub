@@ -14,13 +14,20 @@ const config: CapacitorConfig = {
       sound: 'beep.wav',
     },
     SplashScreen: {
-      launchShowDuration: 1500,
-      launchAutoHide: true,
+      launchShowDuration: 2000,
+      launchAutoHide: false,
       backgroundColor: '#ffffff',
       showSpinner: false,
       androidSplashResourceName: 'splash',
-      androidScaleType: 'CENTER_CROP',
+      androidScaleType: 'CENTER_INSIDE',
+      splashFullScreen: true,
       splashImmersive: false,
+      iosSpinnerStyle: 'small',
+      spinnerColor: '#999999',
+    },
+    Browser: {
+      windowName: '_self',
+      presentationStyle: 'popover'
     },
     App: {
       appUrlOpen: {

@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { supabase } from '@/integrations/supabase/client'
 
 // Initialize React app
 createRoot(document.getElementById("root")!).render(<App />);
@@ -9,30 +10,43 @@ createRoot(document.getElementById("root")!).render(<App />);
 if (typeof window !== 'undefined') {
   // Small delay to ensure React has rendered
   setTimeout(() => {
-    // Dynamically import and hide splash screen to avoid blocking
-    import('@capacitor/splash-screen')
-      .then(({ SplashScreen }) => {
-        SplashScreen.hide();
-      })
-      .catch(() => {
-        // Ignore if splash screen plugin not available
-        console.log('SplashScreen plugin not available');
-      });
+    // Use window object to access SplashScreen plugin
+    const capacitorWindow = window as any;
+    if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.SplashScreen) {
+      try {
+        capacitorWindow.Capacitor.Plugins.SplashScreen.hide();
+        console.log('Splash screen hidden successfully');
+      } catch (error) {
+        console.log('Error hiding splash screen:', error);
+      }
+    } else {
+      console.log('SplashScreen plugin not available on window object');
+    }
 
     // Set up OAuth callback handling if on native platform
     if (window.location.protocol === 'capacitor:') {
       setupOAuthCallbackHandling();
     }
-  }, 500);
+  }, 1000); // Increased delay to show logo a bit longer
 }
 
 async function setupOAuthCallbackHandling() {
   try {
-    const [{ App: CapacitorApp }, { Browser }, { supabase }] = await Promise.all([
-      import('@capacitor/app'),
-      import('@capacitor/browser'),
-      import('@/integrations/supabase/client')
-    ]);
+    // Use window object to access Capacitor plugins instead of dynamic imports
+    const capacitorWindow = window as any;
+    if (!capacitorWindow.Capacitor || !capacitorWindow.Capacitor.Plugins) {
+      console.log('Capacitor plugins not available on window object');
+      return;
+    }
+    
+    const CapacitorApp = capacitorWindow.Capacitor.Plugins.App;
+    const Browser = capacitorWindow.Capacitor.Plugins.Browser;
+    
+    console.log('OAuth callback handling set up with plugins:', {
+      hasApp: !!CapacitorApp,
+      hasBrowser: !!Browser,
+      hasSupabase: !!supabase
+    });
 
     CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
       console.log('Deep link received:', url);
@@ -41,7 +55,9 @@ async function setupOAuthCallbackHandling() {
         try {
           // Close the in-app browser
           try {
-            await Browser.close();
+            if (Browser && Browser.close) {
+              await Browser.close();
+            }
           } catch (err) {
             console.log('Browser close error (may be expected):', err);
           }
