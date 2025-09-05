@@ -6,7 +6,9 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { NotificationsTest } from "@/components/NotificationsTest";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { LogOut, Bell, TestTube, User } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { LogOut, Bell, TestTube, User, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -14,9 +16,11 @@ import { useNavigate } from "react-router-dom";
 const UserPage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [showNotificationsTest, setShowNotificationsTest] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [dailyReminder, setDailyReminder] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Auth states
   const [email, setEmail] = useState("");
@@ -50,6 +54,46 @@ const UserPage = () => {
       console.error("Auth error:", error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      // Call the database function to delete the user account and all associated data
+      const { data, error } = await supabase.rpc('delete_user_account');
+      
+      if (error) {
+        throw new Error(error.message || 'Failed to delete account. Please contact support.');
+      }
+
+      // Check if the function returned an error
+      if (data && !data.success) {
+        throw new Error(data.error || 'Failed to delete account. Please contact support.');
+      }
+
+      toast({
+        title: "Account Deleted",
+        description: "Your account and all associated data have been permanently deleted.",
+      });
+
+      // Sign out and redirect to auth page
+      // Note: The user will already be signed out since their account was deleted
+      navigate('/auth');
+      
+    } catch (error: any) {
+      console.error('Account deletion error:', error);
+      
+      toast({
+        title: "Error Deleting Account",
+        description: error.message || "Failed to delete account. Please try again or contact support.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -181,11 +225,48 @@ const UserPage = () => {
 
           {/* Actions */}
           <Card>
-            <CardContent className="pt-6">
-              <Button onClick={signOut} variant="destructive" className="w-full">
+            <CardHeader>
+              <CardTitle>Account Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button onClick={signOut} variant="outline" className="w-full">
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
               </Button>
+              
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="w-full">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Account
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-2">
+                      <p>This action cannot be undone. This will permanently delete your account and remove all your data from our servers.</p>
+                      <p className="font-medium text-foreground">This includes:</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li>Your user profile and settings</li>
+                        <li>All habit tracking data</li>
+                        <li>Prayer logs and personal notes</li>
+                        <li>Any other personal information stored in the app</li>
+                      </ul>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isDeleting ? "Deleting..." : "Yes, delete my account"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
         </div>

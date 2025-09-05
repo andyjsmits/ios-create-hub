@@ -1,6 +1,12 @@
 PODS:
   - Capacitor (7.4.3):
     - CapacitorCordova
+  - CapacitorApp (7.0.2):
+    - Capacitor
+  - CapacitorBrowser (7.0.2):
+    - Capacitor
+  - CapacitorCommunityAppleSignIn (7.0.1):
+    - Capacitor
   - CapacitorCordova (7.4.3)
   - CapacitorLocalNotifications (7.0.2):
     - Capacitor
@@ -11,6 +17,9 @@ PODS:
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
+  - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
+  - "CapacitorCommunityAppleSignIn (from `../../node_modules/@capacitor-community/apple-sign-in`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorLocalNotifications (from `../../node_modules/@capacitor/local-notifications`)"
   - "CapacitorPushNotifications (from `../../node_modules/@capacitor/push-notifications`)"
@@ -19,6 +28,12 @@ DEPENDENCIES:
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorApp:
+    :path: "../../node_modules/@capacitor/app"
+  CapacitorBrowser:
+    :path: "../../node_modules/@capacitor/browser"
+  CapacitorCommunityAppleSignIn:
+    :path: "../../node_modules/@capacitor-community/apple-sign-in"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorLocalNotifications:
@@ -30,11 +45,14 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Capacitor: 28d6c01026a9a3f7156529498ec1f389a2a28dbc
+  CapacitorApp: 1f6922c9c5c8b1c538d7fbe92ebe44a81b34bed3
+  CapacitorBrowser: 22541e48442de44dc629c214388290d6eecc6ae9
+  CapacitorCommunityAppleSignIn: 9a69d5f1d9c0a071da3a35a42f90da85c7ea054e
   CapacitorCordova: 435121e81a2df4d0034f0fb11fcefab5104cfdb5
   CapacitorLocalNotifications: 665188ae8accd40806129073896fb2b39322d858
   CapacitorPushNotifications: 7c0659b349b149ee3936a682da31a9d269de9582
   CapacitorSplashScreen: 157947576b59d913792063a8d442a79e6d283ee5
 
-PODFILE CHECKSUM: 39a12aa4fd35166d375d2c6ea691796aeeacc22e
+PODFILE CHECKSUM: 6997450b6c9e3a565c9b761e37ec52bacad1b3c4
 
 COCOAPODS: 1.16.2
