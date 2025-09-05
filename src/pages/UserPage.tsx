@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { NotificationsTest } from "@/components/NotificationsTest";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut, Bell, TestTube, User, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -42,18 +43,121 @@ const UserPage = () => {
           }
         });
         if (error) throw error;
+        toast({
+          title: "Success!",
+          description: "Check your email to confirm your account.",
+        });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        navigate("/");
+        if (data.user) {
+          window.location.href = '/';
+        }
       }
     } catch (error: any) {
-      console.error("Auth error:", error.message);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const isNative = window.location.protocol === 'capacitor:';
+      const redirectTo = isNative 
+        ? 'app.smits.pulse://auth/callback' 
+        : `${window.location.origin}/user`;
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: isNative,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      // If we're on native platform and have a URL, open in-app browser
+      if (isNative && data.url) {
+        try {
+          const capacitorWindow = window as any;
+          if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
+            const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
+              url: data.url
+            });
+            console.log('In-app browser opened successfully:', browserResult);
+          } else {
+            window.open(data.url, '_blank');
+          }
+        } catch (browserError) {
+          console.error('In-app browser failed:', browserError);
+          window.open(data.url, '_blank');
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      const isNative = window.location.protocol === 'capacitor:';
+      const redirectTo = isNative 
+        ? 'app.smits.pulse://auth/callback' 
+        : `${window.location.origin}/user`;
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: isNative,
+          queryParams: {
+            scope: 'name email'
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      // If we're on native platform and have a URL, open in-app browser
+      if (isNative && data.url) {
+        try {
+          const capacitorWindow = window as any;
+          if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
+            const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
+              url: data.url
+            });
+            console.log('In-app browser opened successfully:', browserResult);
+          } else {
+            window.open(data.url, '_blank');
+          }
+        } catch (browserError) {
+          console.error('In-app browser failed:', browserError);
+          window.open(data.url, '_blank');
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -108,41 +212,154 @@ const UserPage = () => {
                   <User className="h-8 w-8 text-primary" />
                 </div>
                 <CardTitle className="text-2xl">Welcome to PULSE</CardTitle>
+                <p className="text-muted-foreground">Sign in to access your account</p>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleAuth} className="space-y-4">
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
-                  </Button>
-                </form>
-                <div className="mt-4 text-center">
-                  <button
-                    onClick={() => setIsSignUp(!isSignUp)}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
-                  </button>
-                </div>
+                <Tabs defaultValue="signin" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="signin">Sign In</TabsTrigger>
+                    <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="signin">
+                    <div className="space-y-4">
+                      <form onSubmit={(e) => { setIsSignUp(false); handleAuth(e); }} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="signin-email">Email</Label>
+                          <Input
+                            id="signin-email"
+                            type="email"
+                            placeholder="Enter your email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="signin-password">Password</Label>
+                          <Input
+                            id="signin-password"
+                            type="password"
+                            placeholder="Enter your password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <Button type="submit" className="w-full" disabled={loading}>
+                          {loading ? "Signing in..." : "Sign In"}
+                        </Button>
+                      </form>
+
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                          <span className="bg-background px-2 text-muted-foreground">
+                            Or continue with
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={handleGoogleSignIn}
+                        >
+                          <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+                            <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h240z"></path>
+                          </svg>
+                          Continue with Google
+                        </Button>
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full bg-black text-white hover:bg-gray-800"
+                          onClick={handleAppleSignIn}
+                        >
+                          <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="apple" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
+                            <path fill="currentColor" d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
+                          </svg>
+                          Continue with Apple
+                        </Button>
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="signup">
+                    <div className="space-y-4">
+                      <form onSubmit={(e) => { setIsSignUp(true); handleAuth(e); }} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-email">Email</Label>
+                          <Input
+                            id="signup-email"
+                            type="email"
+                            placeholder="Enter your email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-password">Password</Label>
+                          <Input
+                            id="signup-password"
+                            type="password"
+                            placeholder="Create a password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            minLength={6}
+                          />
+                        </div>
+                        <Button type="submit" className="w-full" disabled={loading}>
+                          {loading ? "Creating account..." : "Sign Up"}
+                        </Button>
+                      </form>
+
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                          <span className="bg-background px-2 text-muted-foreground">
+                            Or continue with
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={handleGoogleSignIn}
+                        >
+                          <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+                            <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h240z"></path>
+                          </svg>
+                          Continue with Google
+                        </Button>
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full bg-black text-white hover:bg-gray-800"
+                          onClick={handleAppleSignIn}
+                        >
+                          <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="apple" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
+                            <path fill="currentColor" d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
+                          </svg>
+                          Continue with Apple
+                        </Button>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </div>
