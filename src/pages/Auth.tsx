@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Capacitor } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,47 +104,37 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     try {
-      const isNative = Capacitor.isNativePlatform();
+      // Check if we're on a native platform and use in-app browser
+      const redirectTo = window.location.protocol === 'capacitor:' 
+        ? 'app.smits.pulse://auth/callback' 
+        : `${window.location.origin}/auth`;
       
-      if (isNative) {
-        // For native platforms, use in-app browser for OAuth
-        const redirectTo = 'app.smits.pulse://auth/callback';
-        
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo,
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent'
-            }
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
           }
-        });
+        }
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        // Open the OAuth URL in in-app browser
-        if (data.url) {
+      // If we're on native platform and have a URL, try to open in-app browser
+      if (window.location.protocol === 'capacitor:' && data.url) {
+        try {
+          const { Browser } = await import('@capacitor/browser');
           await Browser.open({
             url: data.url,
             windowName: '_self',
             presentationStyle: 'popover'
           });
+        } catch (browserError) {
+          console.log('In-app browser not available, falling back to external browser');
+          // Fallback: the OAuth will still work with external browser
         }
-      } else {
-        // For web, use standard OAuth flow
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: `${window.location.origin}/auth`,
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent'
-            }
-          }
-        });
-
-        if (error) throw error;
       }
     } catch (error: any) {
       toast({
@@ -159,45 +147,36 @@ const Auth = () => {
 
   const handleAppleSignIn = async () => {
     try {
-      const isNative = Capacitor.isNativePlatform();
+      // Check if we're on a native platform and use in-app browser
+      const redirectTo = window.location.protocol === 'capacitor:' 
+        ? 'app.smits.pulse://auth/callback' 
+        : `${window.location.origin}/auth`;
       
-      if (isNative) {
-        // For native platforms, use in-app browser for OAuth
-        const redirectTo = 'app.smits.pulse://auth/callback';
-        
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'apple',
-          options: {
-            redirectTo,
-            queryParams: {
-              scope: 'name email'
-            }
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo,
+          queryParams: {
+            scope: 'name email'
           }
-        });
+        }
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        // Open the OAuth URL in in-app browser
-        if (data.url) {
+      // If we're on native platform and have a URL, try to open in-app browser
+      if (window.location.protocol === 'capacitor:' && data.url) {
+        try {
+          const { Browser } = await import('@capacitor/browser');
           await Browser.open({
             url: data.url,
             windowName: '_self',
             presentationStyle: 'popover'
           });
+        } catch (browserError) {
+          console.log('In-app browser not available, falling back to external browser');
+          // Fallback: the OAuth will still work with external browser
         }
-      } else {
-        // For web, use standard OAuth flow
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'apple',
-          options: {
-            redirectTo: `${window.location.origin}/auth`,
-            queryParams: {
-              scope: 'name email'
-            }
-          }
-        });
-
-        if (error) throw error;
       }
     } catch (error: any) {
       toast({
