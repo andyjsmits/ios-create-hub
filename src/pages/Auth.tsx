@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,22 +106,48 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     try {
-      // Use app custom URL scheme for mobile, fallback to web URL for browser
-      const isNative = window.location.protocol === 'capacitor:';
-      const redirectTo = isNative ? 'app.smits.pulse://auth/callback' : `${window.location.origin}/auth`;
+      const isNative = Capacitor.isNativePlatform();
       
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
+      if (isNative) {
+        // For native platforms, use in-app browser for OAuth
+        const redirectTo = 'app.smits.pulse://auth/callback';
+        
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent'
+            }
           }
-        }
-      });
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+
+        // Open the OAuth URL in in-app browser
+        if (data.url) {
+          await Browser.open({
+            url: data.url,
+            windowName: '_self',
+            presentationStyle: 'popover'
+          });
+        }
+      } else {
+        // For web, use standard OAuth flow
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/auth`,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent'
+            }
+          }
+        });
+
+        if (error) throw error;
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -131,21 +159,46 @@ const Auth = () => {
 
   const handleAppleSignIn = async () => {
     try {
-      // Use app custom URL scheme for mobile, fallback to web URL for browser
-      const isNative = window.location.protocol === 'capacitor:';
-      const redirectTo = isNative ? 'app.smits.pulse://auth/callback' : `${window.location.origin}/auth`;
+      const isNative = Capacitor.isNativePlatform();
       
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo,
-          queryParams: {
-            scope: 'name email'
+      if (isNative) {
+        // For native platforms, use in-app browser for OAuth
+        const redirectTo = 'app.smits.pulse://auth/callback';
+        
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: {
+            redirectTo,
+            queryParams: {
+              scope: 'name email'
+            }
           }
-        }
-      });
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+
+        // Open the OAuth URL in in-app browser
+        if (data.url) {
+          await Browser.open({
+            url: data.url,
+            windowName: '_self',
+            presentationStyle: 'popover'
+          });
+        }
+      } else {
+        // For web, use standard OAuth flow
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: {
+            redirectTo: `${window.location.origin}/auth`,
+            queryParams: {
+              scope: 'name email'
+            }
+          }
+        });
+
+        if (error) throw error;
+      }
     } catch (error: any) {
       toast({
         title: "Error",

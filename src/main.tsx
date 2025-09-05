@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import { Capacitor } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 import App from './App.tsx'
 import './index.css'
 import { supabase } from '@/integrations/supabase/client'
@@ -25,6 +26,14 @@ if (Capacitor.isNativePlatform()) {
         console.log('Query params:', Object.fromEntries(params.entries()));
         console.log('Fragment params:', Object.fromEntries(fragmentParams.entries()));
         
+        // Close the in-app browser when we receive the callback
+        try {
+          await Browser.close();
+        } catch (err) {
+          // Browser might not be open or already closed
+          console.log('Browser close error (may be expected):', err);
+        }
+
         // Check for authorization code (PKCE flow)
         const code = params.get('code');
         if (code) {
