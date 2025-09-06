@@ -6,6 +6,7 @@ import { PrayerManager } from "@/components/PrayerManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useHabits, PrayerPerson } from "@/hooks/useHabits";
+import { useHabitTracking } from "@/hooks/useHabitTracking";
 import { MessageCircle, Book, Ear, HandHeart, Volume2, Settings } from "lucide-react";
 import p2cLogo from "@/assets/p2c-students-logos.png";
 
@@ -20,6 +21,9 @@ const Index = () => {
   const { habitData: serveHabitData, loading: serveLoading } = useHabits('serve');
   const { habitData: echoHabitData, loading: echoLoading } = useHabits('echo');
 
+  // Add habit tracking
+  const { toggleHabitCompletion, isHabitCompletedToday: isCompletedFromTracking, loading: trackingLoading } = useHabitTracking();
+
   const [showPrayerManager, setShowPrayerManager] = useState(false);
 
   // Get prayer list from database or use empty array
@@ -31,7 +35,7 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
-  const allLoading = loading || prayLoading || unionLoading || listenLoading || serveLoading || echoLoading;
+  const allLoading = loading || prayLoading || unionLoading || listenLoading || serveLoading || echoLoading || trackingLoading;
 
   if (allLoading) {
     return (
@@ -48,13 +52,9 @@ const Index = () => {
     return null;
   }
 
-  // Helper function to check if habit is completed today
-  const isHabitCompletedToday = (habitData: any): boolean => {
-    if (!habitData?.trackingHistory) return false;
-    const today = new Date().toISOString().split('T')[0];
-    return habitData.trackingHistory.some((entry: any) => 
-      entry.date === today && entry.completed
-    );
+  // Helper function to check if habit is completed today - using new tracking system
+  const isHabitCompletedToday = (habitType: 'pray' | 'union' | 'listen' | 'serve' | 'echo'): boolean => {
+    return isCompletedFromTracking(habitType);
   };
 
   // Calculate streak from all habits
@@ -135,7 +135,7 @@ const Index = () => {
       details: prayerList.length > 0 
         ? `Praying for: ${prayerList.map(p => p.name).join(', ')}`
         : "Set up your prayer list to get started",
-      completed: isHabitCompletedToday(prayHabitData)
+      completed: isHabitCompletedToday('pray')
     },
     union: {
       title: "Union",
@@ -144,7 +144,7 @@ const Index = () => {
       type: "bible" as const,
       gradient: "var(--gradient-blue)",
       details: "Daily Bible reading and reflection with God",
-      completed: isHabitCompletedToday(unionHabitData)
+      completed: isHabitCompletedToday('union')
     },
     listen: {
       title: "Listen",
@@ -153,7 +153,7 @@ const Index = () => {
       type: "conversation" as const,
       gradient: "var(--gradient-purple)",
       details: "Listening is a way of loving people",
-      completed: isHabitCompletedToday(listenHabitData)
+      completed: isHabitCompletedToday('listen')
     },
     serve: {
       title: "Serve",
@@ -162,7 +162,7 @@ const Index = () => {
       type: "service" as const,
       gradient: "var(--gradient-teal)",
       details: "Track weekly acts of service",
-      completed: isHabitCompletedToday(serveHabitData)
+      completed: isHabitCompletedToday('serve')
     },
     echo: {
       title: "Echo",
@@ -171,7 +171,7 @@ const Index = () => {
       type: "testimony" as const,
       gradient: "var(--gradient-orange)",
       details: "Give voice to God's goodness and character",
-      completed: isHabitCompletedToday(echoHabitData)
+      completed: isHabitCompletedToday('echo')
     }
   };
 
@@ -192,6 +192,10 @@ const Index = () => {
 
   const handleUpdatePrayerList = (newPrayerList: PrayerPerson[]) => {
     updatePrayerList(newPrayerList);
+  };
+
+  const handleHabitToggle = (habitType: 'pray' | 'union' | 'listen' | 'serve' | 'echo') => {
+    toggleHabitCompletion(habitType);
   };
 
   // Calculate stats from real data
@@ -255,7 +259,7 @@ const Index = () => {
               icon={habitConfig.icon}
               type={habitConfig.type}
               completed={habitConfig.completed}
-              onToggle={() => {}} // Remove toggle functionality
+              onToggle={() => handleHabitToggle(key as 'pray' | 'union' | 'listen' | 'serve' | 'echo')}
               onNavigate={() => handleHabitNavigation(key)}
               gradient={habitConfig.gradient}
               details={habitConfig.details}

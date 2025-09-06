@@ -55,8 +55,8 @@ export const HabitCard = ({
   };
   
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 overflow-hidden relative border border-border shadow-md bg-card cursor-pointer"
-          onClick={onNavigate}>
+    <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 overflow-hidden relative border border-border shadow-md bg-card"
+          style={{ touchAction: 'manipulation' }}>
       <CardHeader className="relative pb-4">
         <div className="flex items-start gap-4">
           <div className="p-4 rounded-xl shadow-sm" style={{ background: gradient }}>
@@ -76,6 +76,19 @@ export const HabitCard = ({
             {completed ? 'COMPLETED' : 'PENDING'}
           </span>
         </div>
+        {onNavigate && (
+          <Button 
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate();
+            }}
+            className="w-full mt-4" 
+            variant="outline"
+            style={{ touchAction: 'manipulation' }}
+          >
+            {getActionText()}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
