@@ -1,10 +1,53 @@
-// Temporarily disable Capacitor imports to fix white screen issue
-// import { LocalNotifications } from '@capacitor/local-notifications';
-// import { PushNotifications } from '@capacitor/push-notifications';
-// import { Capacitor } from '@capacitor/core';
+// Conditional imports to avoid resolution errors on web
+let LocalNotifications: any = null;
+let PushNotifications: any = null;
+let Capacitor: any = null;
+
+// Initialize Capacitor from global object instead of dynamic imports
+const initializeCapacitor = async () => {
+  try {
+    // Check if we're in a Capacitor environment
+    const isCapacitorEnvironment = 
+      typeof window !== 'undefined' && 
+      ((window as any).Capacitor || 
+       window.location.protocol === 'capacitor:' ||
+       (window as any).webkit?.messageHandlers);
+    
+    console.log('Capacitor environment detection:', {
+      hasWindow: typeof window !== 'undefined',
+      hasCapacitor: !!(window as any)?.Capacitor,
+      protocol: window?.location?.protocol,
+      hasWebkit: !!(window as any)?.webkit?.messageHandlers,
+      isCapacitorEnvironment: !!isCapacitorEnvironment,
+      availablePlugins: (window as any)?.Capacitor?.Plugins ? Object.keys((window as any).Capacitor.Plugins) : []
+    });
+
+    if (isCapacitorEnvironment && (window as any).Capacitor) {
+      console.log('Using Capacitor global object...');
+      
+      // Use the global Capacitor object directly
+      Capacitor = (window as any).Capacitor;
+      LocalNotifications = (window as any).Capacitor.Plugins?.LocalNotifications;
+      PushNotifications = (window as any).Capacitor.Plugins?.PushNotifications;
+      
+      console.log('Capacitor modules loaded successfully:', {
+        hasCapacitor: !!Capacitor,
+        hasLocalNotifications: !!LocalNotifications,
+        hasPushNotifications: !!PushNotifications,
+        isNative: Capacitor.isNativePlatform ? Capacitor.isNativePlatform() : 'unknown',
+        platform: Capacitor.getPlatform ? Capacitor.getPlatform() : 'unknown'
+      });
+    } else {
+      console.log('Not in Capacitor environment, using web fallback');
+    }
+  } catch (error) {
+    console.log('Error initializing Capacitor, using web fallback:', error);
+  }
+};
 
 export interface NotificationService {
   requestPermissions(): Promise<boolean>;
+  checkPermissions(): Promise<boolean>;
   scheduleLocalNotification(options: {
     title: string;
     body: string;
@@ -17,9 +60,44 @@ export interface NotificationService {
 }
 
 class CapacitorNotificationService implements NotificationService {
+  async checkPermissions(): Promise<boolean> {
+    try {
+      if (!LocalNotifications) {
+        console.log('LocalNotifications not available, falling back to web');
+        return false;
+      }
+      
+      console.log('Checking local notification permissions...');
+      const result = await LocalNotifications.checkPermissions();
+      console.log('Current notification permissions:', result);
+      return result.display === 'granted';
+    } catch (error) {
+      console.error('Error checking notification permissions:', error);
+      return false;
+    }
+  }
+
   async requestPermissions(): Promise<boolean> {
-    console.log('Capacitor notifications temporarily disabled');
-    return false;
+    try {
+      if (!LocalNotifications) {
+        console.log('LocalNotifications not available, falling back to web');
+        return false;
+      }
+      
+      console.log('Requesting local notification permissions...');
+      const result = await LocalNotifications.requestPermissions();
+      console.log('Local notifications permission result:', result);
+      
+      if (result.display === 'granted') {
+        return true;
+      }
+      
+      console.log('Local notifications permission denied, status:', result.display);
+      return false;
+    } catch (error) {
+      console.error('Error requesting notification permissions:', error);
+      return false;
+    }
   }
 
   async scheduleLocalNotification(options: {
@@ -28,24 +106,88 @@ class CapacitorNotificationService implements NotificationService {
     id: number;
     schedule?: Date;
   }): Promise<void> {
-    console.log('Capacitor notifications temporarily disabled');
+    try {
+      if (!LocalNotifications) {
+        console.log('LocalNotifications not available for scheduling');
+        return;
+      }
+      
+      const scheduleOptions: any = {
+        notifications: [{
+          title: options.title,
+          body: options.body,
+          id: options.id,
+          ...(options.schedule && {
+            schedule: {
+              at: options.schedule
+            }
+          })
+        }]
+      };
+      
+      console.log('Scheduling notification:', scheduleOptions);
+      await LocalNotifications.schedule(scheduleOptions);
+      console.log('Notification scheduled successfully');
+    } catch (error) {
+      console.error('Error scheduling notification:', error);
+    }
   }
 
   async schedulePrayerReminder(personName: string, time: Date): Promise<void> {
-    console.log('Capacitor notifications temporarily disabled');
+    await this.scheduleLocalNotification({
+      title: 'PULSE Prayer Reminder',
+      body: `Time to pray for ${personName}`,
+      id: Math.floor(Math.random() * 10000),
+      schedule: time
+    });
   }
 
   async cancelNotification(id: number): Promise<void> {
-    console.log('Capacitor notifications temporarily disabled');
+    try {
+      if (!LocalNotifications) {
+        console.log('LocalNotifications not available for cancelling');
+        return;
+      }
+      
+      await LocalNotifications.cancel({ notifications: [{ id: id.toString() }] });
+      console.log('Notification cancelled:', id);
+    } catch (error) {
+      console.error('Error cancelling notification:', error);
+    }
   }
 
   async setupPushNotifications(): Promise<void> {
-    console.log('Capacitor notifications temporarily disabled');
+    try {
+      if (!PushNotifications) {
+        console.log('PushNotifications not available');
+        return;
+      }
+      
+      console.log('Setting up push notifications...');
+      const result = await PushNotifications.requestPermissions();
+      console.log('Push notifications permission result:', result);
+      
+      if (result.receive === 'granted') {
+        await PushNotifications.register();
+        console.log('Push notifications registered successfully');
+      } else {
+        console.log('Push notifications permission denied');
+      }
+    } catch (error) {
+      console.error('Error setting up push notifications:', error);
+    }
   }
 }
 
 // Fallback service for web platform
 class WebNotificationService implements NotificationService {
+  async checkPermissions(): Promise<boolean> {
+    if ('Notification' in window) {
+      return Notification.permission === 'granted';
+    }
+    return false;
+  }
+
   async requestPermissions(): Promise<boolean> {
     if ('Notification' in window) {
       const permission = await Notification.requestPermission();
@@ -94,5 +236,69 @@ class WebNotificationService implements NotificationService {
 }
 
 // Create the appropriate service based on platform
-// Temporarily using WebNotificationService for all platforms to fix white screen
-export const notificationService: NotificationService = new WebNotificationService();
+const createNotificationService = async (): Promise<NotificationService> => {
+  await initializeCapacitor();
+  
+  // Check if we successfully loaded Capacitor and we're on a native platform
+  const isNativePlatform = Capacitor && 
+    (Capacitor.isNativePlatform() || 
+     (typeof window !== 'undefined' && window.location.protocol === 'capacitor:'));
+  
+  console.log('Service selection:', {
+    hasCapacitor: !!Capacitor,
+    isNativePlatform: isNativePlatform,
+    capacitorPlatform: Capacitor?.getPlatform?.(),
+    protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown'
+  });
+  
+  if (isNativePlatform) {
+    console.log('Using Capacitor notification service for native platform');
+    return new CapacitorNotificationService();
+  } else {
+    console.log('Using web notification service for web/browser platform');
+    return new WebNotificationService();
+  }
+};
+
+// Create a promise that resolves to the service
+let notificationServicePromise: Promise<NotificationService> | null = null;
+
+const getNotificationService = async (): Promise<NotificationService> => {
+  if (!notificationServicePromise) {
+    notificationServicePromise = createNotificationService();
+  }
+  return await notificationServicePromise;
+};
+
+// Export a wrapper that handles the async initialization
+export const notificationService: NotificationService = {
+  async checkPermissions(): Promise<boolean> {
+    const service = await getNotificationService();
+    return service.checkPermissions();
+  },
+  async requestPermissions(): Promise<boolean> {
+    const service = await getNotificationService();
+    return service.requestPermissions();
+  },
+  async scheduleLocalNotification(options: {
+    title: string;
+    body: string;
+    id: number;
+    schedule?: Date;
+  }): Promise<void> {
+    const service = await getNotificationService();
+    return service.scheduleLocalNotification(options);
+  },
+  async schedulePrayerReminder(personName: string, time: Date): Promise<void> {
+    const service = await getNotificationService();
+    return service.schedulePrayerReminder(personName, time);
+  },
+  async cancelNotification(id: number): Promise<void> {
+    const service = await getNotificationService();
+    return service.cancelNotification(id);
+  },
+  async setupPushNotifications(): Promise<void> {
+    const service = await getNotificationService();
+    return service.setupPushNotifications();
+  }
+};

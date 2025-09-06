@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, MessageCircle, Bell, BellOff } from "lucide-react";
+import { Plus, Trash2, MessageCircle, Bell, BellOff, Clock, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PrayerPerson } from "@/hooks/useHabits";
 import { usePrayerNotifications } from "@/hooks/usePrayerNotifications";
@@ -21,7 +21,10 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
   const [newPersonName, setNewPersonName] = useState('');
   const [newPersonTime, setNewPersonTime] = useState('09:00');
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [newPersonNotificationEnabled, setNewPersonNotificationEnabled] = useState(false);
   const [hasNotificationPermission, setHasNotificationPermission] = useState(false);
+  const [editingTimeForPerson, setEditingTimeForPerson] = useState<string | null>(null);
+  const [editTimeValue, setEditTimeValue] = useState('');
   const { toast } = useToast();
   const { scheduleNotification, cancelNotification, notifications } = usePrayerNotifications();
 
@@ -31,11 +34,34 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
 
   const checkNotificationPermission = async () => {
     try {
-      const permission = await notificationService.requestPermissions();
+      // First check if we already have permission
+      let permission = await notificationService.checkPermissions();
+      console.log('Current notification permission status:', permission);
+      
+      if (!permission) {
+        // If we don't have permission, request it
+        console.log('Requesting notification permissions...');
+        permission = await notificationService.requestPermissions();
+        console.log('Permission request result:', permission);
+      }
+      
       setHasNotificationPermission(permission);
+      
+      if (!permission) {
+        toast({
+          title: "Notifications Disabled",
+          description: "Please enable notifications in your device settings to receive prayer reminders.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error('Error checking notification permission:', error);
       setHasNotificationPermission(false);
+      toast({
+        title: "Permission Error",
+        description: "Unable to check notification permissions. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -78,16 +104,35 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     const updatedList = [...prayerList, newPerson];
     onUpdatePrayerList(updatedList);
 
+    // Schedule notification if enabled and we have permission
+    if (newPersonNotificationEnabled && hasNotificationPermission) {
+      const cadence = selectedDays.length === 7 ? 'daily' : 'weekly';
+      await scheduleNotification(newPerson.name, cadence, newPersonTime);
+      
+      toast({
+        title: 'Success',
+        description: `Added ${newPerson.name} with prayer reminders enabled`,
+        variant: 'default'
+      });
+    } else if (newPersonNotificationEnabled && !hasNotificationPermission) {
+      toast({
+        title: 'Added Successfully',
+        description: `Added ${newPerson.name}. Enable notifications to get reminders.`,
+        variant: 'default'
+      });
+    } else {
+      toast({
+        title: 'Success',
+        description: `Added ${newPerson.name} to your prayer list`,
+        variant: 'default'
+      });
+    }
+
     // Reset form
     setNewPersonName('');
     setSelectedDays([]);
     setNewPersonTime('09:00');
-
-    toast({
-      title: 'Success',
-      description: `Added ${newPerson.name} to your prayer list`,
-      variant: 'default'
-    });
+    setNewPersonNotificationEnabled(false);
   };
 
   const removePerson = async (personToRemove: PrayerPerson) => {
@@ -115,6 +160,52 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
       return person;
     });
     onUpdatePrayerList(updatedList);
+  };
+
+  const updatePersonTime = async (personId: string, newTime: string) => {
+    const updatedList = prayerList.map(person => {
+      if (person.id === personId) {
+        return { ...person, notificationTime: newTime };
+      }
+      return person;
+    });
+    onUpdatePrayerList(updatedList);
+    
+    // Update notification if it's enabled
+    const person = prayerList.find(p => p.id === personId);
+    if (person && hasNotification(person.name)) {
+      // Cancel existing notification and reschedule with new time
+      const existingNotification = notifications.find(n => n.person_name === person.name);
+      if (existingNotification) {
+        await cancelNotification(existingNotification.id);
+        const cadence = person.daysOfWeek && person.daysOfWeek.length === 7 ? 'daily' : 'weekly';
+        await scheduleNotification(person.name, cadence, newTime);
+        
+        toast({
+          title: 'Time Updated',
+          description: `Prayer reminder time updated to ${newTime}`,
+          variant: 'default'
+        });
+      }
+    }
+  };
+
+  const startEditingTime = (personId: string, currentTime: string) => {
+    setEditingTimeForPerson(personId);
+    setEditTimeValue(currentTime);
+  };
+
+  const cancelEditingTime = () => {
+    setEditingTimeForPerson(null);
+    setEditTimeValue('');
+  };
+
+  const saveEditingTime = async () => {
+    if (editingTimeForPerson && editTimeValue) {
+      await updatePersonTime(editingTimeForPerson, editTimeValue);
+      setEditingTimeForPerson(null);
+      setEditTimeValue('');
+    }
   };
 
   const toggleNotification = async (person: PrayerPerson) => {
@@ -172,7 +263,7 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">Prayer List Manager</h2>
-        <p className="text-muted-foreground">Add people to pray for and select which days of the week to pray for them</p>
+        <p className="text-muted-foreground">Add people to pray for, set reminder times, and manage notifications</p>
       </div>
 
       {/* Add New Person Form */}
@@ -224,13 +315,47 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
             />
           </div>
 
-          {!hasNotificationPermission && (
-            <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <BellOff className="h-4 w-4 text-amber-600" />
-              <div className="text-sm">
-                <p className="text-amber-800 font-medium">Notifications disabled</p>
-                <p className="text-amber-700">Enable notifications to get prayer reminders</p>
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {newPersonNotificationEnabled ? (
+                  <Bell className="h-4 w-4 text-primary" />
+                ) : (
+                  <BellOff className="h-4 w-4 text-muted-foreground" />
+                )}
+                <Label className="text-sm font-medium">
+                  Enable prayer reminders
+                </Label>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Get notified at {newPersonTime}
+              </p>
+            </div>
+            <Switch
+              checked={newPersonNotificationEnabled}
+              onCheckedChange={setNewPersonNotificationEnabled}
+              disabled={!hasNotificationPermission}
+            />
+          </div>
+
+          {!hasNotificationPermission && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <BellOff className="h-4 w-4 text-amber-600" />
+                <div className="text-sm">
+                  <p className="text-amber-800 font-medium">Notifications disabled</p>
+                  <p className="text-amber-700">Enable notifications to get prayer reminders</p>
+                </div>
+              </div>
+              <Button 
+                onClick={checkNotificationPermission}
+                variant="outline"
+                size="sm"
+                className="w-full text-amber-800 border-amber-300 hover:bg-amber-100"
+              >
+                <Bell className="h-4 w-4 mr-2" />
+                Enable Notifications
+              </Button>
             </div>
           )}
 
@@ -246,6 +371,9 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
         <Card>
           <CardHeader>
             <CardTitle>Your Prayer List ({prayerList.length} people)</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Click the clock time to edit reminder times
+            </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -255,9 +383,41 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
                     <div className="flex items-center gap-3 mb-2">
                       <h4 className="font-medium">{person.name}</h4>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {person.notificationTime}
-                        </Badge>
+                        {editingTimeForPerson === person.id ? (
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="time"
+                              value={editTimeValue}
+                              onChange={(e) => setEditTimeValue(e.target.value)}
+                              className="w-20 h-6 text-xs p-1"
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={saveEditingTime}
+                              className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                            >
+                              <Check className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={cancelEditingTime}
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Badge 
+                            variant="outline" 
+                            className="text-xs cursor-pointer hover:bg-gray-50 transition-colors flex items-center gap-1"
+                            onClick={() => startEditingTime(person.id, person.notificationTime)}
+                          >
+                            <Clock className="h-3 w-3" />
+                            {person.notificationTime}
+                          </Badge>
+                        )}
                         <div className="flex items-center gap-2">
                           {hasNotification(person.name) ? (
                             <Bell className="h-3 w-3 text-primary" />

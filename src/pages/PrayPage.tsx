@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -120,6 +120,12 @@ const PrayPage = () => {
       description: "Prayer resource has been removed."
     });
   };
+
+  const handleToggleHabitCompletion = useCallback(() => {
+    console.log('PrayPage: toggleHabitCompletion called');
+    toggleHabitCompletion('pray');
+  }, [toggleHabitCompletion]);
+
   if (loading || prayerLoading) {
     return <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -157,7 +163,7 @@ const PrayPage = () => {
 
       <div className="container mx-auto px-6 py-12 max-w-4xl">
         {/* Prayer Activity Tracker */}
-        <PrayerTracker prayerList={habitData.prayerList || []} onToggleHabitCompletion={() => toggleHabitCompletion('pray')} isHabitCompletedToday={isHabitCompletedToday('pray')} onOpenPrayerManager={() => setShowPrayerManager(true)} />
+        <PrayerTracker prayerList={habitData.prayerList || []} onToggleHabitCompletion={handleToggleHabitCompletion} isHabitCompletedToday={isHabitCompletedToday('pray')} onOpenPrayerManager={() => setShowPrayerManager(true)} />
 
         {/* About This Habit */}
         <Card className="my-8">
