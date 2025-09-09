@@ -1,26 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { NotificationsTest } from "@/components/NotificationsTest";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Bell, TestTube, User, Trash2 } from "lucide-react";
+import { LogOut, Bell, Clock, User, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { notificationService } from "@/services/notificationService";
 
 const UserPage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [showNotificationsTest, setShowNotificationsTest] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [dailyReminder, setDailyReminder] = useState(true);
+  const [dailyReminderTime, setDailyReminderTime] = useState("09:00");
   const [isDeleting, setIsDeleting] = useState(false);
   
   // Auth states
@@ -28,6 +27,125 @@ const UserPage = () => {
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Load user preferences when component mounts
+  useEffect(() => {
+    if (user) {
+      loadUserPreferences();
+    }
+  }, [user]);
+
+  const loadUserPreferences = async () => {
+    try {
+      // Load from localStorage for now (can be moved to database later)
+      const savedNotifications = localStorage.getItem('notificationsEnabled');
+      const savedDailyReminder = localStorage.getItem('dailyReminder');
+      const savedReminderTime = localStorage.getItem('dailyReminderTime');
+      
+      if (savedNotifications !== null) {
+        setNotificationsEnabled(JSON.parse(savedNotifications));
+      }
+      if (savedDailyReminder !== null) {
+        setDailyReminder(JSON.parse(savedDailyReminder));
+      }
+      if (savedReminderTime) {
+        setDailyReminderTime(savedReminderTime);
+      }
+    } catch (error) {
+      console.error('Error loading user preferences:', error);
+    }
+  };
+
+  const saveUserPreferences = async () => {
+    try {
+      localStorage.setItem('notificationsEnabled', JSON.stringify(notificationsEnabled));
+      localStorage.setItem('dailyReminder', JSON.stringify(dailyReminder));
+      localStorage.setItem('dailyReminderTime', dailyReminderTime);
+      
+      // Schedule/cancel daily reminder based on settings
+      if (dailyReminder && notificationsEnabled) {
+        await scheduleDailyReminder();
+      } else {
+        await cancelDailyReminder();
+      }
+      
+      toast({
+        title: "Settings Saved",
+        description: "Your notification preferences have been updated.",
+      });
+    } catch (error) {
+      console.error('Error saving user preferences:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save notification preferences.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const scheduleDailyReminder = async () => {
+    try {
+      // Convert time string to Date object for today
+      const [hours, minutes] = dailyReminderTime.split(':').map(Number);
+      const reminderTime = new Date();
+      reminderTime.setHours(hours, minutes, 0, 0);
+      
+      // If the time has already passed today, schedule for tomorrow
+      if (reminderTime <= new Date()) {
+        reminderTime.setDate(reminderTime.getDate() + 1);
+      }
+
+      await notificationService.scheduleLocalNotification({
+        title: 'PULSE Daily Reminder',
+        body: 'Time to engage with your missional habits! Check your progress and stay on track.',
+        id: 999, // Use a fixed ID for daily reminders
+        schedule: reminderTime,
+      });
+    } catch (error) {
+      console.error('Error scheduling daily reminder:', error);
+    }
+  };
+
+  const cancelDailyReminder = async () => {
+    try {
+      await notificationService.cancelNotification(999);
+    } catch (error) {
+      console.error('Error canceling daily reminder:', error);
+    }
+  };
+
+  const handleNotificationToggle = async (enabled: boolean) => {
+    setNotificationsEnabled(enabled);
+    
+    if (enabled) {
+      // Request permissions when enabling notifications
+      const hasPermission = await notificationService.requestPermissions();
+      if (!hasPermission) {
+        setNotificationsEnabled(false);
+        toast({
+          title: "Permission Required",
+          description: "Please enable notifications in your device settings to receive reminders.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
+    // Auto-save when toggled
+    setTimeout(saveUserPreferences, 100);
+  };
+
+  const handleDailyReminderToggle = async (enabled: boolean) => {
+    setDailyReminder(enabled);
+    // Auto-save when toggled
+    setTimeout(saveUserPreferences, 100);
+  };
+
+  const handleReminderTimeChange = (time: string) => {
+    setDailyReminderTime(time);
+    // Auto-save after a short delay
+    setTimeout(saveUserPreferences, 500);
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -413,7 +531,7 @@ const UserPage = () => {
                 <Switch
                   id="notifications"
                   checked={notificationsEnabled}
-                  onCheckedChange={setNotificationsEnabled}
+                  onCheckedChange={handleNotificationToggle}
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -426,17 +544,33 @@ const UserPage = () => {
                 <Switch
                   id="daily-reminder"
                   checked={dailyReminder}
-                  onCheckedChange={setDailyReminder}
+                  onCheckedChange={handleDailyReminderToggle}
+                  disabled={!notificationsEnabled}
                 />
               </div>
-              <Button
-                onClick={() => setShowNotificationsTest(true)}
-                variant="outline"
-                className="w-full"
-              >
-                <TestTube className="h-4 w-4 mr-2" />
-                Test Notifications
-              </Button>
+              {dailyReminder && notificationsEnabled && (
+                <div className="space-y-2">
+                  <Label htmlFor="reminder-time" className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Reminder Time
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="reminder-time"
+                      type="time"
+                      value={dailyReminderTime}
+                      onChange={(e) => handleReminderTimeChange(e.target.value)}
+                      className="w-32"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      Daily reminder at {new Date(`2000-01-01T${dailyReminderTime}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    You'll receive a daily reminder to engage with your PULSE missional habits at this time.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -488,16 +622,6 @@ const UserPage = () => {
           </Card>
         </div>
       </div>
-
-      {/* Notifications Test Dialog */}
-      <Dialog open={showNotificationsTest} onOpenChange={setShowNotificationsTest}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Test Notifications</DialogTitle>
-          </DialogHeader>
-          <NotificationsTest />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

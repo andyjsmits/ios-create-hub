@@ -108,17 +108,37 @@ const Auth = () => {
     try {
       // Check if we're on a native platform and use in-app browser
       const isNative = window.location.protocol === 'capacitor:';
-      const redirectTo = isNative 
-        ? 'app.smits.pulse://auth/callback' 
-        : `${window.location.origin}/auth`;
+      const isAndroidEmulator = navigator.userAgent.includes('Android') && 
+                               (window.location.hostname === 'localhost' || 
+                                window.location.hostname === '10.0.2.2');
       
-      console.log('Starting Google OAuth, isNative:', isNative, 'redirectTo:', redirectTo);
+      // For Android emulator, use fixed localhost redirect configured in Supabase
+      let redirectTo;
+      if (isAndroidEmulator) {
+        // Try to determine the correct localhost port, defaulting to common development ports
+        const currentPort = window.location.port;
+        const port = currentPort && currentPort !== '80' && currentPort !== '443' ? currentPort : '3000';
+        redirectTo = `http://localhost:${port}/auth`;
+      } else if (isNative) {
+        redirectTo = 'app.smits.pulse://auth/callback';
+      } else {
+        // For web, use current origin
+        redirectTo = `${window.location.origin}/auth`;
+      }
+      
+      console.log('Starting Google OAuth:', {
+        isNative,
+        isAndroidEmulator,
+        redirectTo,
+        userAgent: navigator.userAgent,
+        hostname: window.location.hostname
+      });
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
-          skipBrowserRedirect: isNative, // Prevent auto-opening in system browser
+          skipBrowserRedirect: false, // Let system handle browser redirects for better compatibility
           queryParams: {
             access_type: 'offline',
             prompt: 'consent'
@@ -130,34 +150,50 @@ const Auth = () => {
 
       console.log('OAuth response:', { hasUrl: !!data.url, url: data.url });
 
-      // If we're on native platform and have a URL, open in-app browser
-      if (isNative && data.url) {
-        try {
-          console.log('Attempting to open in-app browser...');
-          
-          // Check if Capacitor Browser plugin is available via window object
-          const capacitorWindow = window as any;
-          if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
-            console.log('Using Capacitor Browser plugin from window object');
-            const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
-              url: data.url
-            });
-            console.log('In-app browser opened successfully:', browserResult);
-          } else {
-            console.log('Browser plugin not found on window object, using system browser');
-            window.open(data.url, '_blank');
+      // If we have a URL, open it appropriately
+      if (data.url) {
+        if (isAndroidEmulator || !isNative) {
+          // For Android emulator and web, redirect in the same window
+          console.log('Redirecting in same window for emulator/web');
+          window.location.href = data.url;
+        } else if (isNative) {
+          try {
+            console.log('Attempting to open in-app browser...');
+            
+            // Check if Capacitor Browser plugin is available via window object
+            const capacitorWindow = window as any;
+            if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
+              console.log('Using Capacitor Browser plugin from window object');
+              const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
+                url: data.url,
+                windowName: '_self'
+              });
+              console.log('In-app browser opened successfully:', browserResult);
+            } else {
+              console.log('Browser plugin not found, redirecting in same window');
+              window.location.href = data.url;
+            }
+          } catch (browserError) {
+            console.error('In-app browser failed:', browserError);
+            console.log('Falling back to same window redirect');
+            window.location.href = data.url;
           }
-        } catch (browserError) {
-          console.error('In-app browser failed:', browserError);
-          console.log('Falling back to system browser');
-          window.open(data.url, '_blank');
         }
       }
     } catch (error: any) {
       console.error('Google OAuth error:', error);
+      
+      // Provide more specific error messaging for network issues
+      let errorMessage = error.message;
+      if (error.message?.includes('Network request failed') || error.message?.includes('timeout')) {
+        errorMessage = 'Network connection failed. If using Android emulator, ensure you have internet connectivity and try again.';
+      } else if (error.message?.includes('522') || error.message?.includes('Cloudflare')) {
+        errorMessage = 'Authentication service temporarily unavailable. Please try again in a moment.';
+      }
+      
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Authentication Error",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -167,17 +203,37 @@ const Auth = () => {
     try {
       // Check if we're on a native platform and use in-app browser
       const isNative = window.location.protocol === 'capacitor:';
-      const redirectTo = isNative 
-        ? 'app.smits.pulse://auth/callback' 
-        : `${window.location.origin}/auth`;
+      const isAndroidEmulator = navigator.userAgent.includes('Android') && 
+                               (window.location.hostname === 'localhost' || 
+                                window.location.hostname === '10.0.2.2');
       
-      console.log('Starting Apple OAuth, isNative:', isNative, 'redirectTo:', redirectTo);
+      // For Android emulator, use fixed localhost redirect configured in Supabase
+      let redirectTo;
+      if (isAndroidEmulator) {
+        // Try to determine the correct localhost port, defaulting to common development ports
+        const currentPort = window.location.port;
+        const port = currentPort && currentPort !== '80' && currentPort !== '443' ? currentPort : '3000';
+        redirectTo = `http://localhost:${port}/auth`;
+      } else if (isNative) {
+        redirectTo = 'app.smits.pulse://auth/callback';
+      } else {
+        // For web, use current origin
+        redirectTo = `${window.location.origin}/auth`;
+      }
+      
+      console.log('Starting Apple OAuth:', {
+        isNative,
+        isAndroidEmulator,
+        redirectTo,
+        userAgent: navigator.userAgent,
+        hostname: window.location.hostname
+      });
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
           redirectTo,
-          skipBrowserRedirect: isNative, // Prevent auto-opening in system browser
+          skipBrowserRedirect: false, // Let system handle browser redirects for better compatibility
           queryParams: {
             scope: 'name email'
           }
@@ -188,34 +244,50 @@ const Auth = () => {
 
       console.log('OAuth response:', { hasUrl: !!data.url, url: data.url });
 
-      // If we're on native platform and have a URL, open in-app browser
-      if (isNative && data.url) {
-        try {
-          console.log('Attempting to open in-app browser...');
-          
-          // Check if Capacitor Browser plugin is available via window object
-          const capacitorWindow = window as any;
-          if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
-            console.log('Using Capacitor Browser plugin from window object');
-            const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
-              url: data.url
-            });
-            console.log('In-app browser opened successfully:', browserResult);
-          } else {
-            console.log('Browser plugin not found on window object, using system browser');
-            window.open(data.url, '_blank');
+      // If we have a URL, open it appropriately
+      if (data.url) {
+        if (isAndroidEmulator || !isNative) {
+          // For Android emulator and web, redirect in the same window
+          console.log('Redirecting in same window for emulator/web');
+          window.location.href = data.url;
+        } else if (isNative) {
+          try {
+            console.log('Attempting to open in-app browser...');
+            
+            // Check if Capacitor Browser plugin is available via window object
+            const capacitorWindow = window as any;
+            if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
+              console.log('Using Capacitor Browser plugin from window object');
+              const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
+                url: data.url,
+                windowName: '_self'
+              });
+              console.log('In-app browser opened successfully:', browserResult);
+            } else {
+              console.log('Browser plugin not found, redirecting in same window');
+              window.location.href = data.url;
+            }
+          } catch (browserError) {
+            console.error('In-app browser failed:', browserError);
+            console.log('Falling back to same window redirect');
+            window.location.href = data.url;
           }
-        } catch (browserError) {
-          console.error('In-app browser failed:', browserError);
-          console.log('Falling back to system browser');
-          window.open(data.url, '_blank');
         }
       }
     } catch (error: any) {
       console.error('Apple OAuth error:', error);
+      
+      // Provide more specific error messaging for network issues
+      let errorMessage = error.message;
+      if (error.message?.includes('Network request failed') || error.message?.includes('timeout')) {
+        errorMessage = 'Network connection failed. If using Android emulator, ensure you have internet connectivity and try again.';
+      } else if (error.message?.includes('522') || error.message?.includes('Cloudflare')) {
+        errorMessage = 'Authentication service temporarily unavailable. Please try again in a moment.';
+      }
+      
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Authentication Error",
+        description: errorMessage,
         variant: "destructive",
       });
     }
