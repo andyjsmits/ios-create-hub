@@ -286,7 +286,7 @@ const UserPage = () => {
     
     try {
       // Call the database function to delete the user account and all associated data
-      const { data, error } = await supabase.rpc('delete_user_account');
+      const { data, error } = await (supabase as any).rpc('delete_user_account');
       
       if (error) {
         throw new Error(error.message || 'Failed to delete account. Please contact support.');
