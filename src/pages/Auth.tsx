@@ -167,7 +167,8 @@ const Auth = () => {
               const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
                 url: data.url,
                 windowName: '_blank',
-                presentationStyle: 'popover'
+                presentationStyle: 'fullscreen',
+                toolbarColor: '#ffffff'
               });
               console.log('In-app browser opened successfully:', browserResult);
             } else {
@@ -270,7 +271,8 @@ const Auth = () => {
               const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
                 url: data.url,
                 windowName: '_blank',
-                presentationStyle: 'popover'
+                presentationStyle: 'fullscreen',
+                toolbarColor: '#ffffff'
               });
               console.log('In-app browser opened successfully:', browserResult);
             } else {

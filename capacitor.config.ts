@@ -27,7 +27,7 @@ const config: CapacitorConfig = {
     },
     Browser: {
       windowName: '_blank',
-      presentationStyle: 'popover'
+      presentationStyle: 'fullscreen'
     },
     App: {
       appUrlOpen: {

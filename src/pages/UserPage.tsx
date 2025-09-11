@@ -328,7 +328,8 @@ const UserPage = () => {
               await capacitorWindow.Capacitor.Plugins.Browser.open({
                 url: data.url,
                 windowName: '_blank',
-                presentationStyle: 'popover'
+                presentationStyle: 'fullscreen',
+                toolbarColor: '#ffffff'
               });
             } else {
               window.location.href = data.url;
