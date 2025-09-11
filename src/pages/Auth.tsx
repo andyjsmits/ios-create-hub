@@ -251,24 +251,35 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // For web/fallback, handle URL redirection
+      console.log('OAuth response:', { hasUrl: !!data.url, url: data.url });
+
+      // If we have a URL, open it appropriately
       if (data.url) {
         if (isAndroidEmulator || !isNative) {
+          // For Android emulator and web, redirect in the same window
+          console.log('Redirecting in same window for emulator/web');
           window.location.href = data.url;
-        } else {
-          // Try in-app browser for native non-iOS
+        } else if (isNative) {
           try {
+            console.log('Attempting to open in-app browser...');
+            
+            // Check if Capacitor Browser plugin is available via window object
             const capacitorWindow = window as any;
-            if (capacitorWindow.Capacitor?.Plugins?.Browser) {
-              await capacitorWindow.Capacitor.Plugins.Browser.open({
+            if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
+              console.log('Using Capacitor Browser plugin from window object');
+              const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
                 url: data.url,
                 windowName: '_blank',
                 presentationStyle: 'popover'
               });
+              console.log('In-app browser opened successfully:', browserResult);
             } else {
+              console.log('Browser plugin not found, redirecting in same window');
               window.location.href = data.url;
             }
-          } catch {
+          } catch (browserError) {
+            console.error('In-app browser failed:', browserError);
+            console.log('Falling back to same window redirect');
             window.location.href = data.url;
           }
         }
