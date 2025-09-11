@@ -166,7 +166,8 @@ const Auth = () => {
               console.log('Using Capacitor Browser plugin from window object');
               const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
                 url: data.url,
-                windowName: '_self'
+                windowName: '_blank',
+                presentationStyle: 'popover'
               });
               console.log('In-app browser opened successfully:', browserResult);
             } else {
@@ -261,7 +262,8 @@ const Auth = () => {
             if (capacitorWindow.Capacitor?.Plugins?.Browser) {
               await capacitorWindow.Capacitor.Plugins.Browser.open({
                 url: data.url,
-                windowName: '_self'
+                windowName: '_blank',
+                presentationStyle: 'popover'
               });
             } else {
               window.location.href = data.url;

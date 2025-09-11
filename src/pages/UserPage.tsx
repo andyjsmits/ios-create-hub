@@ -327,7 +327,8 @@ const UserPage = () => {
             if (capacitorWindow.Capacitor?.Plugins?.Browser) {
               await capacitorWindow.Capacitor.Plugins.Browser.open({
                 url: data.url,
-                windowName: '_self'
+                windowName: '_blank',
+                presentationStyle: 'popover'
               });
             } else {
               window.location.href = data.url;

@@ -26,7 +26,7 @@ const config: CapacitorConfig = {
       spinnerColor: '#999999',
     },
     Browser: {
-      windowName: '_self',
+      windowName: '_blank',
       presentationStyle: 'popover'
     },
     App: {
