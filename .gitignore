@@ -7,10 +7,49 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
 
 dist
 dist-ssr
 *.local
+
+# Environment variables - NEVER COMMIT THESE
+.env*
+!.env.example
+*.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Runtime config files that may contain secrets
+config/local.json
+config/development.json
+config/production.json
 
 # Editor directories and files
 .vscode/*
@@ -22,5 +61,23 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.env
-.env.local
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Capacitor
+.capacitor/
+android/app/build/
+ios/App/build/
+ios/App/Pods/
+
+# Build files that might contain secrets
+*.keystore
+*.p12
+*.mobileprovision
