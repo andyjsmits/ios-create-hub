@@ -38,6 +38,8 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8FAC4E932E66838100B1960C /* New Folder */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "New Folder";
 			sourceTree = "<group>";
 		};
@@ -238,12 +240,8 @@
 			);
 			inputFileListPaths = (
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

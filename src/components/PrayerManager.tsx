@@ -26,7 +26,7 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
   const [editingTimeForPerson, setEditingTimeForPerson] = useState<string | null>(null);
   const [editTimeValue, setEditTimeValue] = useState('');
   const { toast } = useToast();
-  const { scheduleNotification, cancelNotification, notifications } = usePrayerNotifications();
+  const { scheduleNotification, cancelNotification, cancelAllNotificationsForPerson, notifications } = usePrayerNotifications();
 
   useEffect(() => {
     checkNotificationPermission();
@@ -107,7 +107,7 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     // Schedule notification if enabled and we have permission
     if (newPersonNotificationEnabled && hasNotificationPermission) {
       const cadence = selectedDays.length === 7 ? 'daily' : 'weekly';
-      await scheduleNotification(newPerson.name, cadence, newPersonTime);
+      await scheduleNotification(newPerson.name, cadence, newPersonTime, selectedDays);
       
       toast({
         title: 'Success',
@@ -137,10 +137,7 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
 
   const removePerson = async (personToRemove: PrayerPerson) => {
     // Cancel any existing notifications for this person
-    const existingNotification = notifications.find(n => n.person_name === personToRemove.name);
-    if (existingNotification) {
-      await cancelNotification(existingNotification.id);
-    }
+    await cancelAllNotificationsForPerson(personToRemove.name);
 
     const updatedList = prayerList.filter(person => person.id !== personToRemove.id);
     onUpdatePrayerList(updatedList);
@@ -174,19 +171,16 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     // Update notification if it's enabled
     const person = prayerList.find(p => p.id === personId);
     if (person && hasNotification(person.name)) {
-      // Cancel existing notification and reschedule with new time
-      const existingNotification = notifications.find(n => n.person_name === person.name);
-      if (existingNotification) {
-        await cancelNotification(existingNotification.id);
-        const cadence = person.daysOfWeek && person.daysOfWeek.length === 7 ? 'daily' : 'weekly';
-        await scheduleNotification(person.name, cadence, newTime);
-        
-        toast({
-          title: 'Time Updated',
-          description: `Prayer reminder time updated to ${newTime}`,
-          variant: 'default'
-        });
-      }
+      // Cancel all existing notifications and reschedule with new time
+      await cancelAllNotificationsForPerson(person.name);
+      const cadence = person.daysOfWeek && person.daysOfWeek.length === 7 ? 'daily' : 'weekly';
+      await scheduleNotification(person.name, cadence, newTime, person.daysOfWeek);
+      
+      toast({
+        title: 'Time Updated',
+        description: `Prayer reminder time updated to ${newTime}`,
+        variant: 'default'
+      });
     }
   };
 
@@ -222,15 +216,13 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
       setHasNotificationPermission(true);
     }
 
-    const existingNotification = notifications.find(n => n.person_name === person.name);
-    
-    if (existingNotification) {
-      // Cancel existing notification
-      await cancelNotification(existingNotification.id);
+    if (hasNotification(person.name)) {
+      // Cancel all existing notifications for this person
+      await cancelAllNotificationsForPerson(person.name);
     } else {
       // Schedule new notification - determine cadence based on days
       const cadence = person.daysOfWeek && person.daysOfWeek.length === 7 ? 'daily' : 'weekly';
-      await scheduleNotification(person.name, cadence, person.notificationTime || '09:00');
+      await scheduleNotification(person.name, cadence, person.notificationTime || '09:00', person.daysOfWeek);
     }
   };
 

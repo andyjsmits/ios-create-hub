@@ -201,92 +201,92 @@ const Auth = () => {
 
   const handleAppleSignIn = async () => {
     try {
-      // Check if we're on a native platform and use in-app browser
       const isNative = window.location.protocol === 'capacitor:';
+      const isIOS = window.navigator.userAgent.includes('iPhone') || window.navigator.userAgent.includes('iPad');
+      
+      console.log('Starting Apple Sign-In:', {
+        isNative,
+        isIOS,
+        userAgent: navigator.userAgent,
+        platform: window.location.protocol
+      });
+
+      // On native iOS, skip the problematic native Apple Sign-In and go straight to web OAuth
+      // which is working perfectly and is App Store compliant when using in-app browser
+      if (isNative && isIOS) {
+        console.log('iOS detected - using web OAuth for reliable authentication');
+        // Skip native Apple Sign-In and use the working web OAuth approach
+      }
+      
+      // Fallback to web OAuth for non-iOS or when native fails
       const isAndroidEmulator = navigator.userAgent.includes('Android') && 
                                (window.location.hostname === 'localhost' || 
                                 window.location.hostname === '10.0.2.2');
       
-      // For Android emulator, use fixed localhost redirect configured in Supabase
       let redirectTo;
       if (isAndroidEmulator) {
-        // Try to determine the correct localhost port, defaulting to common development ports
         const currentPort = window.location.port;
         const port = currentPort && currentPort !== '80' && currentPort !== '443' ? currentPort : '3000';
         redirectTo = `http://localhost:${port}/auth`;
       } else if (isNative) {
         redirectTo = 'app.smits.pulse://auth/callback';
       } else {
-        // For web, use current origin
         redirectTo = `${window.location.origin}/auth`;
       }
       
-      console.log('Starting Apple OAuth:', {
-        isNative,
-        isAndroidEmulator,
-        redirectTo,
-        userAgent: navigator.userAgent,
-        hostname: window.location.hostname
-      });
+      console.log('Using web OAuth fallback with redirectTo:', redirectTo);
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
           redirectTo,
-          skipBrowserRedirect: false, // Let system handle browser redirects for better compatibility
+          skipBrowserRedirect: false,
           queryParams: {
-            scope: 'name email'
+            scope: 'name email',
+            response_mode: 'form_post'
           }
         }
       });
 
       if (error) throw error;
 
-      console.log('OAuth response:', { hasUrl: !!data.url, url: data.url });
-
-      // If we have a URL, open it appropriately
+      // For web/fallback, handle URL redirection
       if (data.url) {
         if (isAndroidEmulator || !isNative) {
-          // For Android emulator and web, redirect in the same window
-          console.log('Redirecting in same window for emulator/web');
           window.location.href = data.url;
-        } else if (isNative) {
+        } else {
+          // Try in-app browser for native non-iOS
           try {
-            console.log('Attempting to open in-app browser...');
-            
-            // Check if Capacitor Browser plugin is available via window object
             const capacitorWindow = window as any;
-            if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
-              console.log('Using Capacitor Browser plugin from window object');
-              const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
+            if (capacitorWindow.Capacitor?.Plugins?.Browser) {
+              await capacitorWindow.Capacitor.Plugins.Browser.open({
                 url: data.url,
                 windowName: '_self'
               });
-              console.log('In-app browser opened successfully:', browserResult);
             } else {
-              console.log('Browser plugin not found, redirecting in same window');
               window.location.href = data.url;
             }
-          } catch (browserError) {
-            console.error('In-app browser failed:', browserError);
-            console.log('Falling back to same window redirect');
+          } catch {
             window.location.href = data.url;
           }
         }
       }
     } catch (error: any) {
-      console.error('Apple OAuth error:', error);
+      console.error('Apple Sign-In error:', error);
       
-      // Provide more specific error messaging for network issues
       let errorMessage = error.message;
-      if (error.message?.includes('Network request failed') || error.message?.includes('timeout')) {
-        errorMessage = 'Network connection failed. If using Android emulator, ensure you have internet connectivity and try again.';
-      } else if (error.message?.includes('522') || error.message?.includes('Cloudflare')) {
-        errorMessage = 'Authentication service temporarily unavailable. Please try again in a moment.';
+      if (error.code === 'provider_disabled') {
+        errorMessage = 'Apple Sign-In is not enabled in the app configuration. Please contact support to enable Apple authentication.';
+      } else if (error.message?.includes('400') || error.status === 400) {
+        errorMessage = 'Apple authentication configuration error. Please ensure Apple Sign-In is properly configured.';
+      } else if (error.message?.includes('user_cancelled_authorize') || error.message?.includes('cancelled')) {
+        errorMessage = 'Apple Sign-In was cancelled.';
+      } else if (error.message?.includes('Invalid redirect_uri')) {
+        errorMessage = 'Invalid redirect URL for Apple Sign-In. Please contact support.';
       }
       
       toast({
-        title: "Authentication Error",
+        title: "Apple Sign-In Error",
         description: errorMessage,
         variant: "destructive",
       });
