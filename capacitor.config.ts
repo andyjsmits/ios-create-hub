@@ -25,10 +25,6 @@ const config: CapacitorConfig = {
       iosSpinnerStyle: 'small',
       spinnerColor: '#999999',
     },
-    Browser: {
-      windowName: '_blank',
-      presentationStyle: 'fullscreen'
-    },
     App: {
       appUrlOpen: {
         iosCustomScheme: 'app.smits.pulse',

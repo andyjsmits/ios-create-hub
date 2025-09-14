@@ -26,7 +26,6 @@ export default defineConfig(({ mode }) => ({
       external: [
         '@capacitor/core',
         '@capacitor/app',
-        '@capacitor/browser',
         '@capacitor-community/apple-sign-in'
       ]
     }

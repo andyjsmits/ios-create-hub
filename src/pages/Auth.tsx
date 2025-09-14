@@ -10,8 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { MessageCircle, Mail } from "lucide-react";
 import p2cLogo from "@/assets/p2c-students-logos.png";
 
-// For now, we'll handle the Browser plugin differently to avoid import issues
-
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -138,7 +136,7 @@ const Auth = () => {
         provider: 'google',
         options: {
           redirectTo,
-          skipBrowserRedirect: false, // Let system handle browser redirects for better compatibility
+          skipBrowserRedirect: isNative, // Skip automatic redirect on native, handle manually
           queryParams: {
             access_type: 'offline',
             prompt: 'consent'
@@ -160,24 +158,21 @@ const Auth = () => {
           try {
             console.log('Attempting to open in-app browser...');
             
-            // Check if Capacitor Browser plugin is available via window object
             const capacitorWindow = window as any;
             if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
-              console.log('Using Capacitor Browser plugin from window object');
+              console.log('Using Capacitor Browser plugin for in-app authentication');
               const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
                 url: data.url,
-                windowName: '_blank',
-                presentationStyle: 'fullscreen',
+                windowName: '_self',
                 toolbarColor: '#ffffff'
               });
               console.log('In-app browser opened successfully:', browserResult);
             } else {
-              console.log('Browser plugin not found, redirecting in same window');
-              window.location.href = data.url;
+              throw new Error('Browser plugin not available');
             }
           } catch (browserError) {
             console.error('In-app browser failed:', browserError);
-            console.log('Falling back to same window redirect');
+            console.log('Falling back to external browser redirect');
             window.location.href = data.url;
           }
         }
@@ -242,7 +237,7 @@ const Auth = () => {
         provider: 'apple',
         options: {
           redirectTo,
-          skipBrowserRedirect: false,
+          skipBrowserRedirect: isNative, // Skip automatic redirect on native, handle manually
           queryParams: {
             scope: 'name email',
             response_mode: 'form_post'
@@ -264,24 +259,21 @@ const Auth = () => {
           try {
             console.log('Attempting to open in-app browser...');
             
-            // Check if Capacitor Browser plugin is available via window object
             const capacitorWindow = window as any;
             if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
-              console.log('Using Capacitor Browser plugin from window object');
+              console.log('Using Capacitor Browser plugin for in-app authentication');
               const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
                 url: data.url,
-                windowName: '_blank',
-                presentationStyle: 'fullscreen',
+                windowName: '_self',
                 toolbarColor: '#ffffff'
               });
               console.log('In-app browser opened successfully:', browserResult);
             } else {
-              console.log('Browser plugin not found, redirecting in same window');
-              window.location.href = data.url;
+              throw new Error('Browser plugin not available');
             }
           } catch (browserError) {
             console.error('In-app browser failed:', browserError);
-            console.log('Falling back to same window redirect');
+            console.log('Falling back to external browser redirect');
             window.location.href = data.url;
           }
         }
