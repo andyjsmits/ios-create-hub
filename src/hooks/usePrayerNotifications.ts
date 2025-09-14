@@ -11,7 +11,7 @@ export interface PrayerNotification {
   notification_time: string;
   notification_id: number;
   is_active: boolean;
-  day_of_week?: number;
+  day_of_week?: number; // Optional - for backward compatibility
 }
 
 export const usePrayerNotifications = () => {
@@ -32,16 +32,27 @@ export const usePrayerNotifications = () => {
     if (!user) return;
 
     try {
+      console.log('Loading notifications for user:', user.id);
       const { data, error } = await supabase
         .from('prayer_notifications')
         .select('*')
         .eq('user_id', user.id)
         .eq('is_active', true);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error loading notifications:', error);
+        throw error;
+      }
+      
+      console.log('Loaded notifications from database:', data);
       setNotifications((data || []) as PrayerNotification[]);
     } catch (error) {
       console.error('Error loading notifications:', error);
+      toast({
+        title: 'Error loading notifications',
+        description: 'Failed to load prayer reminders from database',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
@@ -53,7 +64,12 @@ export const usePrayerNotifications = () => {
     notificationTime: string,
     selectedDays?: number[]
   ) => {
-    if (!user) return;
+    if (!user) {
+      console.error('No user available for scheduling notification');
+      throw new Error('User not authenticated');
+    }
+
+    console.log('Scheduling notification for:', { personName, cadence, notificationTime, selectedDays });
 
     try {
       const [hours, minutes] = notificationTime.split(':').map(Number);
@@ -95,22 +111,29 @@ export const usePrayerNotifications = () => {
         console.log(`Scheduling for ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek]} at ${notificationTime}:`, notificationDate);
 
         // Save to database with day info
+        const insertData: any = {
+          user_id: user.id,
+          person_name: personName,
+          cadence,
+          notification_time: notificationTime,
+          notification_id: notificationId,
+          is_active: true
+        };
+
+        // Insert to database (without day_of_week for now - backward compatibility)
         const { data, error } = await supabase
           .from('prayer_notifications')
-          .insert({
-            user_id: user.id,
-            person_name: personName,
-            cadence,
-            notification_time: notificationTime,
-            notification_id: notificationId,
-            is_active: true,
-            day_of_week: dayOfWeek
-          })
+          .insert(insertData)
           .select()
           .single();
 
         if (error) {
           console.error('Database error for day', dayOfWeek, error);
+          toast({
+            title: 'Database Error',
+            description: `Failed to save notification for ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek]}: ${error.message}`,
+            variant: 'destructive'
+          });
           continue;
         }
 
@@ -174,7 +197,14 @@ export const usePrayerNotifications = () => {
 
   const cancelAllNotificationsForPerson = async (personName: string) => {
     try {
+      console.log('Canceling all notifications for person:', personName);
       const personNotifications = notifications.filter(n => n.person_name === personName);
+      console.log('Found notifications to cancel:', personNotifications.length);
+      
+      if (personNotifications.length === 0) {
+        console.log('No notifications found for person:', personName);
+        return;
+      }
       
       // Update database to mark all as inactive
       const { error } = await supabase
@@ -183,14 +213,21 @@ export const usePrayerNotifications = () => {
         .eq('person_name', personName)
         .eq('user_id', user?.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error canceling notifications:', error);
+        throw error;
+      }
+
+      console.log('Successfully updated database, canceling actual notifications...');
 
       // Cancel all actual notifications
       for (const notification of personNotifications) {
+        console.log('Canceling notification ID:', notification.notification_id);
         await notificationService.cancelNotification(notification.notification_id);
       }
 
       setNotifications(prev => prev.filter(n => n.person_name !== personName));
+      console.log('All notifications canceled for:', personName);
       
       toast({
         title: 'Notifications cancelled',

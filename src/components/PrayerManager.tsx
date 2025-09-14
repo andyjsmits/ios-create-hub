@@ -32,6 +32,10 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     checkNotificationPermission();
   }, []);
 
+  useEffect(() => {
+    console.log('Notifications state updated:', notifications);
+  }, [notifications]);
+
   const checkNotificationPermission = async () => {
     try {
       // First check if we already have permission
@@ -203,8 +207,13 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
   };
 
   const toggleNotification = async (person: PrayerPerson) => {
+    console.log('Toggle notification called for:', person.name, 'Current state:', hasNotification(person.name));
+    
     if (!hasNotificationPermission) {
+      console.log('Requesting notification permissions...');
       const permission = await notificationService.requestPermissions();
+      console.log('Permission result:', permission);
+      
       if (!permission) {
         toast({
           title: 'Permission needed',
@@ -216,13 +225,34 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
       setHasNotificationPermission(true);
     }
 
-    if (hasNotification(person.name)) {
-      // Cancel all existing notifications for this person
-      await cancelAllNotificationsForPerson(person.name);
-    } else {
-      // Schedule new notification - determine cadence based on days
-      const cadence = person.daysOfWeek && person.daysOfWeek.length === 7 ? 'daily' : 'weekly';
-      await scheduleNotification(person.name, cadence, person.notificationTime || '09:00', person.daysOfWeek);
+    try {
+      if (hasNotification(person.name)) {
+        console.log('Canceling notifications for:', person.name);
+        // Cancel all existing notifications for this person
+        await cancelAllNotificationsForPerson(person.name);
+        toast({
+          title: 'Notifications disabled',
+          description: `Prayer reminders disabled for ${person.name}`,
+          variant: 'default'
+        });
+      } else {
+        console.log('Scheduling notifications for:', person.name);
+        // Schedule new notification - determine cadence based on days
+        const cadence = person.daysOfWeek && person.daysOfWeek.length === 7 ? 'daily' : 'weekly';
+        await scheduleNotification(person.name, cadence, person.notificationTime || '09:00', person.daysOfWeek);
+        toast({
+          title: 'Notifications enabled',
+          description: `Prayer reminders enabled for ${person.name}`,
+          variant: 'default'
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling notification:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to toggle notifications. Please try again.',
+        variant: 'destructive'
+      });
     }
   };
 
