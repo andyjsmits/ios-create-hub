@@ -38,8 +38,11 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8FAC4E932E66838100B1960C /* New Folder */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+<<<<<<< HEAD
 			exceptions = (
 			);
+=======
+>>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
 			path = "New Folder";
 			sourceTree = "<group>";
 		};
@@ -240,9 +243,19 @@
 			);
 			inputFileListPaths = (
 			);
+<<<<<<< HEAD
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 			);
+=======
+			inputPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+>>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-App/Pods-App-frameworks.sh\"\n";

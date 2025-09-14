@@ -236,6 +236,7 @@ const UserPage = () => {
   const handleAppleSignIn = async () => {
     try {
       const isNative = window.location.protocol === 'capacitor:';
+<<<<<<< HEAD
       const isIOS = window.navigator.userAgent.includes('iPhone') || window.navigator.userAgent.includes('iPad');
       
       console.log('Starting Apple Sign-In from UserPage:', {
@@ -301,21 +302,33 @@ const UserPage = () => {
       }
       
       console.log('Using web OAuth fallback with redirectTo:', redirectTo);
+=======
+      const redirectTo = isNative 
+        ? 'app.smits.pulse://auth/callback' 
+        : `${window.location.origin}/user`;
+>>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
           redirectTo,
+<<<<<<< HEAD
           skipBrowserRedirect: false,
           queryParams: {
             scope: 'name email',
             response_mode: 'form_post'
+=======
+          skipBrowserRedirect: isNative,
+          queryParams: {
+            scope: 'name email'
+>>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
           }
         }
       });
 
       if (error) throw error;
 
+<<<<<<< HEAD
       // For web/fallback, handle URL redirection
       if (data.url) {
         if (isAndroidEmulator || !isNative) {
@@ -356,6 +369,29 @@ const UserPage = () => {
       toast({
         title: "Apple Sign-In Error",
         description: errorMessage,
+=======
+      // If we're on native platform and have a URL, open in-app browser
+      if (isNative && data.url) {
+        try {
+          const capacitorWindow = window as any;
+          if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
+            const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
+              url: data.url
+            });
+            console.log('In-app browser opened successfully:', browserResult);
+          } else {
+            window.open(data.url, '_blank');
+          }
+        } catch (browserError) {
+          console.error('In-app browser failed:', browserError);
+          window.open(data.url, '_blank');
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+>>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
         variant: "destructive",
       });
     }
@@ -703,11 +739,14 @@ const UserPage = () => {
             </CardContent>
           </Card>
         </div>
+<<<<<<< HEAD
         
         {/* Version indicator */}
         <div className="text-center mt-8 pb-4">
           <p className="text-xs text-muted-foreground/60">v1.1.201</p>
         </div>
+=======
+>>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
       </div>
     </div>
   );
