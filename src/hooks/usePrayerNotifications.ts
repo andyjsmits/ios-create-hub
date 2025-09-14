@@ -110,20 +110,17 @@ export const usePrayerNotifications = () => {
         
         console.log(`Scheduling for ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek]} at ${notificationTime}:`, notificationDate);
 
-        // Save to database with day info
-        const insertData: any = {
-          user_id: user.id,
-          person_name: personName,
-          cadence,
-          notification_time: notificationTime,
-          notification_id: notificationId,
-          is_active: true
-        };
-
-        // Insert to database (without day_of_week for now - backward compatibility)
+        // Save to database (without day_of_week for backward compatibility)
         const { data, error } = await supabase
           .from('prayer_notifications')
-          .insert(insertData)
+          .insert({
+            user_id: user.id,
+            person_name: personName,
+            cadence,
+            notification_time: notificationTime,
+            notification_id: notificationId,
+            is_active: true
+          })
           .select()
           .single();
 
