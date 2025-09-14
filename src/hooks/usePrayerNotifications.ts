@@ -110,12 +110,15 @@ export const usePrayerNotifications = () => {
         
         console.log(`Scheduling for ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek]} at ${notificationTime}:`, notificationDate);
 
-        // Save to database (without day_of_week for backward compatibility)
+        // Save to database with day info encoded in person_name
+        const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek];
+        const personNameWithDay = `${personName}::${dayName}`;
+        
         const { data, error } = await supabase
           .from('prayer_notifications')
           .insert({
             user_id: user.id,
-            person_name: personName,
+            person_name: personNameWithDay,
             cadence,
             notification_time: notificationTime,
             notification_id: notificationId,
@@ -195,7 +198,10 @@ export const usePrayerNotifications = () => {
   const cancelAllNotificationsForPerson = async (personName: string) => {
     try {
       console.log('Canceling all notifications for person:', personName);
-      const personNotifications = notifications.filter(n => n.person_name === personName);
+      // Find notifications that start with the person name (handles both old and new format)
+      const personNotifications = notifications.filter(n => 
+        n.person_name === personName || n.person_name.startsWith(`${personName}::`)
+      );
       console.log('Found notifications to cancel:', personNotifications.length);
       
       if (personNotifications.length === 0) {
@@ -203,11 +209,11 @@ export const usePrayerNotifications = () => {
         return;
       }
       
-      // Update database to mark all as inactive
+      // Update database to mark all as inactive (using LIKE for pattern matching)
       const { error } = await supabase
         .from('prayer_notifications')
         .update({ is_active: false })
-        .eq('person_name', personName)
+        .or(`person_name.eq.${personName},person_name.like.${personName}::%`)
         .eq('user_id', user?.id);
 
       if (error) {
@@ -223,7 +229,9 @@ export const usePrayerNotifications = () => {
         await notificationService.cancelNotification(notification.notification_id);
       }
 
-      setNotifications(prev => prev.filter(n => n.person_name !== personName));
+      setNotifications(prev => prev.filter(n => 
+        !(n.person_name === personName || n.person_name.startsWith(`${personName}::`))
+      ));
       console.log('All notifications canceled for:', personName);
       
       toast({

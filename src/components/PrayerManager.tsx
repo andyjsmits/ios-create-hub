@@ -257,7 +257,65 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
   };
 
   const hasNotification = (personName: string) => {
-    return notifications.some(n => n.person_name === personName);
+    return notifications.some(n => 
+      n.person_name === personName || n.person_name.startsWith(`${personName}::`)
+    );
+  };
+
+  const getNotificationDays = (personName: string) => {
+    const personNotifications = notifications.filter(n => 
+      n.person_name === personName || n.person_name.startsWith(`${personName}::`)
+    );
+    
+    const days: number[] = [];
+    personNotifications.forEach(notification => {
+      if (notification.person_name.includes('::')) {
+        const dayName = notification.person_name.split('::')[1];
+        const dayIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(dayName);
+        if (dayIndex !== -1) {
+          days.push(dayIndex);
+        }
+      }
+    });
+    
+    return days.sort();
+  };
+
+  const updatePersonNotificationDays = async (personId: string, newDays: number[]) => {
+    const person = prayerList.find(p => p.id === personId);
+    if (!person) return;
+
+    try {
+      // Cancel all existing notifications for this person
+      await cancelAllNotificationsForPerson(person.name);
+      
+      // If no days selected, just return (notifications disabled)
+      if (newDays.length === 0) {
+        toast({
+          title: 'Notifications disabled',
+          description: `Prayer reminders disabled for ${person.name}`,
+          variant: 'default'
+        });
+        return;
+      }
+
+      // Schedule new notifications for selected days
+      const cadence = newDays.length === 7 ? 'daily' : 'weekly';
+      await scheduleNotification(person.name, cadence, person.notificationTime || '09:00', newDays);
+      
+      toast({
+        title: 'Notification days updated',
+        description: `Prayer reminders updated for ${person.name}`,
+        variant: 'default'
+      });
+    } catch (error) {
+      console.error('Error updating notification days:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update notification days. Please try again.',
+        variant: 'destructive'
+      });
+    }
   };
 
   const toggleDay = (day: number) => {
@@ -272,13 +330,13 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
     const person = prayerList.find(p => p.id === personId);
     if (!person) return;
 
-    // Ensure daysOfWeek exists and is an array
-    const currentDays = person.daysOfWeek || [];
+    // Get current notification days (not from prayer list, but from actual notifications)
+    const currentDays = getNotificationDays(person.name);
     const newDays = currentDays.includes(day)
       ? currentDays.filter(d => d !== day)
       : [...currentDays, day].sort();
 
-    updatePersonDays(personId, newDays);
+    updatePersonNotificationDays(personId, newDays);
   };
 
   return (
@@ -461,7 +519,7 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
                           <Button
                             key={day.value}
                             type="button"
-                            variant={(person.daysOfWeek || []).includes(day.value) ? "default" : "outline"}
+                            variant={getNotificationDays(person.name).includes(day.value) ? "default" : "outline"}
                             size="sm"
                             onClick={() => togglePersonDay(person.id, day.value)}
                             className="text-xs p-1 h-8"
