@@ -236,162 +236,45 @@ const UserPage = () => {
   const handleAppleSignIn = async () => {
     try {
       const isNative = window.location.protocol === 'capacitor:';
-<<<<<<< HEAD
-      const isIOS = window.navigator.userAgent.includes('iPhone') || window.navigator.userAgent.includes('iPad');
-      
-      console.log('Starting Apple Sign-In from UserPage:', {
-        isNative,
-        isIOS,
-        userAgent: navigator.userAgent,
-        platform: window.location.protocol
-      });
-
-      // On native iOS, use native Apple Sign-In for App Store compliance
-      if (isNative && isIOS) {
-        try {
-          console.log('Using native Apple Sign-In...');
-          
-          // Use Capacitor Apple Sign-In plugin
-          const capacitorWindow = window as any;
-          if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.SignInWithApple) {
-            const AppleSignIn = capacitorWindow.Capacitor.Plugins.SignInWithApple;
-            
-            const result = await AppleSignIn.authorize({
-              clientId: 'app.smits.pulse',
-              redirectURI: 'app.smits.pulse://auth/callback',
-              scopes: 'name email',
-              state: Math.random().toString(36).substring(2, 15)
-            });
-            
-            console.log('Native Apple Sign-In result:', result);
-            
-            if (result && result.response && result.response.identityToken) {
-              // Sign in to Supabase with the Apple identity token
-              const { data, error } = await supabase.auth.signInWithIdToken({
-                provider: 'apple',
-                token: result.response.identityToken,
-                nonce: result.response.nonce
-              });
-              
-              if (error) throw error;
-              
-              console.log('Successfully signed in with Apple:', data);
-              window.location.href = '/';
-              return;
-            }
-          }
-        } catch (nativeError) {
-          console.error('Native Apple Sign-In failed, falling back to web OAuth:', nativeError);
-        }
-      }
-      
-      // Fallback to web OAuth for non-iOS or when native fails
-      const isAndroidEmulator = navigator.userAgent.includes('Android') && 
-                               (window.location.hostname === 'localhost' || 
-                                window.location.hostname === '10.0.2.2');
-      
-      let redirectTo;
-      if (isAndroidEmulator) {
-        const currentPort = window.location.port;
-        const port = currentPort && currentPort !== '80' && currentPort !== '443' ? currentPort : '3000';
-        redirectTo = `http://localhost:${port}/user`;
-      } else if (isNative) {
-        redirectTo = 'app.smits.pulse://auth/callback';
-      } else {
-        redirectTo = `${window.location.origin}/user`;
-      }
-      
-      console.log('Using web OAuth fallback with redirectTo:', redirectTo);
-=======
       const redirectTo = isNative 
         ? 'app.smits.pulse://auth/callback' 
         : `${window.location.origin}/user`;
->>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
           redirectTo,
-<<<<<<< HEAD
-          skipBrowserRedirect: false,
-          queryParams: {
-            scope: 'name email',
-            response_mode: 'form_post'
-=======
           skipBrowserRedirect: isNative,
           queryParams: {
             scope: 'name email'
->>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
           }
         }
       });
 
       if (error) throw error;
 
-<<<<<<< HEAD
-      // For web/fallback, handle URL redirection
-      if (data.url) {
-        if (isAndroidEmulator || !isNative) {
-          window.location.href = data.url;
-        } else {
-          // Try in-app browser for native non-iOS
-          try {
-            const capacitorWindow = window as any;
-            if (capacitorWindow.Capacitor?.Plugins?.Browser) {
-              await capacitorWindow.Capacitor.Plugins.Browser.open({
-                url: data.url,
-                windowName: '_blank',
-                presentationStyle: 'fullscreen',
-                toolbarColor: '#ffffff'
-              });
-            } else {
-              window.location.href = data.url;
-            }
-          } catch {
-            window.location.href = data.url;
-          }
-        }
-      }
-    } catch (error: any) {
-      console.error('Apple Sign-In error from UserPage:', error);
-      
-      let errorMessage = error.message;
-      if (error.code === 'provider_disabled') {
-        errorMessage = 'Apple Sign-In is not enabled in the app configuration. Please contact support to enable Apple authentication.';
-      } else if (error.message?.includes('400') || error.status === 400) {
-        errorMessage = 'Apple authentication configuration error. Please ensure Apple Sign-In is properly configured.';
-      } else if (error.message?.includes('user_cancelled_authorize') || error.message?.includes('cancelled')) {
-        errorMessage = 'Apple Sign-In was cancelled.';
-      } else if (error.message?.includes('Invalid redirect_uri')) {
-        errorMessage = 'Invalid redirect URL for Apple Sign-In. Please contact support.';
-      }
-      
-      toast({
-        title: "Apple Sign-In Error",
-        description: errorMessage,
-=======
-      // If we're on native platform and have a URL, open in-app browser
+      // If we're on native platform and have a URL, open in Safari View Controller
       if (isNative && data.url) {
         try {
           const capacitorWindow = window as any;
           if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
             const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
-              url: data.url
+              url: data.url,
+              windowName: '_self'
             });
-            console.log('In-app browser opened successfully:', browserResult);
+            console.log('Safari View Controller opened successfully:', browserResult);
           } else {
-            window.open(data.url, '_blank');
+            window.open(data.url, '_self');
           }
         } catch (browserError) {
-          console.error('In-app browser failed:', browserError);
-          window.open(data.url, '_blank');
+          console.error('Safari View Controller failed:', browserError);
+          window.open(data.url, '_self');
         }
       }
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
->>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
         variant: "destructive",
       });
     }
@@ -739,14 +622,11 @@ const UserPage = () => {
             </CardContent>
           </Card>
         </div>
-<<<<<<< HEAD
         
         {/* Version indicator */}
         <div className="text-center mt-8 pb-4">
-          <p className="text-xs text-muted-foreground/60">v1.1.201</p>
+          <p className="text-xs text-muted-foreground/60">v1.15.215</p>
         </div>
-=======
->>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
       </div>
     </div>
   );

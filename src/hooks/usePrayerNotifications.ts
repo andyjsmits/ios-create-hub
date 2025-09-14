@@ -11,10 +11,7 @@ export interface PrayerNotification {
   notification_time: string;
   notification_id: number;
   is_active: boolean;
-<<<<<<< HEAD
   day_of_week?: number;
-=======
->>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
 }
 
 export const usePrayerNotifications = () => {
@@ -53,17 +50,12 @@ export const usePrayerNotifications = () => {
   const scheduleNotification = async (
     personName: string,
     cadence: 'daily' | 'weekly',
-<<<<<<< HEAD
     notificationTime: string,
     selectedDays?: number[]
-=======
-    notificationTime: string
->>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
   ) => {
     if (!user) return;
 
     try {
-<<<<<<< HEAD
       const [hours, minutes] = notificationTime.split(':').map(Number);
       const now = new Date();
       
@@ -137,48 +129,6 @@ export const usePrayerNotifications = () => {
       toast({
         title: 'Notifications scheduled',
         description: `Prayer reminders set for ${personName} on ${dayNames.join(', ')}`
-=======
-      const notificationId = Math.floor(Math.random() * 10000);
-      
-      // Save to database
-      const { data, error } = await supabase
-        .from('prayer_notifications')
-        .insert({
-          user_id: user.id,
-          person_name: personName,
-          cadence,
-          notification_time: notificationTime,
-          notification_id: notificationId,
-          is_active: true
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Schedule with notification service
-      const [hours, minutes] = notificationTime.split(':').map(Number);
-      const now = new Date();
-      const notificationDate = new Date();
-      notificationDate.setHours(hours, minutes, 0, 0);
-
-      // If the time has passed today, schedule for tomorrow (daily) or next week (weekly)
-      if (notificationDate <= now) {
-        if (cadence === 'daily') {
-          notificationDate.setDate(notificationDate.getDate() + 1);
-        } else {
-          notificationDate.setDate(notificationDate.getDate() + 7);
-        }
-      }
-
-      await notificationService.schedulePrayerReminder(personName, notificationDate);
-      
-      setNotifications(prev => [...prev, data as PrayerNotification]);
-      
-      toast({
-        title: 'Notification scheduled',
-        description: `Prayer reminder set for ${personName}`
->>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
       });
     } catch (error) {
       console.error('Error scheduling notification:', error);
@@ -222,7 +172,6 @@ export const usePrayerNotifications = () => {
     }
   };
 
-<<<<<<< HEAD
   const cancelAllNotificationsForPerson = async (personName: string) => {
     try {
       const personNotifications = notifications.filter(n => n.person_name === personName);
@@ -257,17 +206,12 @@ export const usePrayerNotifications = () => {
     }
   };
 
-=======
->>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
   return {
     notifications,
     loading,
     scheduleNotification,
     cancelNotification,
-<<<<<<< HEAD
     cancelAllNotificationsForPerson,
-=======
->>>>>>> cd2a2bb41561c8f66bd557d829486dc3cf285804
     refreshNotifications: loadNotifications
   };
 };
