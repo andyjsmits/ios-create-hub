@@ -35,6 +35,13 @@ const UserPage = () => {
     }
   }, [user]);
 
+  // Temporary time value while editing in the picker
+  const [tempReminderTime, setTempReminderTime] = useState(dailyReminderTime);
+  // Sync tempReminderTime when dailyReminderTime changes
+  useEffect(() => {
+    setTempReminderTime(dailyReminderTime);
+  }, [dailyReminderTime]);
+
   const loadUserPreferences = async () => {
     try {
       // Load from localStorage for now (can be moved to database later)
@@ -56,16 +63,33 @@ const UserPage = () => {
     }
   };
 
-  const saveUserPreferences = async () => {
+  // Allow overrides so we can persist immediately when state updates are pending
+  const saveUserPreferences = async (overrides?: {
+    notificationsEnabled?: boolean;
+    dailyReminder?: boolean;
+    dailyReminderTime?: string;
+  }) => {
     try {
-      localStorage.setItem('notificationsEnabled', JSON.stringify(notificationsEnabled));
-      localStorage.setItem('dailyReminder', JSON.stringify(dailyReminder));
-      localStorage.setItem('dailyReminderTime', dailyReminderTime);
+      const notificationsEnabledToSave = overrides?.notificationsEnabled ?? notificationsEnabled;
+      const dailyReminderToSave = overrides?.dailyReminder ?? dailyReminder;
+      const dailyReminderTimeToSave = overrides?.dailyReminderTime ?? dailyReminderTime;
+
+      console.log('saveUserPreferences called, saving:', {
+        notificationsEnabled: notificationsEnabledToSave,
+        dailyReminder: dailyReminderToSave,
+        dailyReminderTime: dailyReminderTimeToSave
+      });
+      
+      localStorage.setItem('notificationsEnabled', JSON.stringify(notificationsEnabledToSave));
+      localStorage.setItem('dailyReminder', JSON.stringify(dailyReminderToSave));
+      localStorage.setItem('dailyReminderTime', dailyReminderTimeToSave);
       
       // Schedule/cancel daily reminder based on settings
-      if (dailyReminder && notificationsEnabled) {
-        await scheduleDailyReminder();
+      if (dailyReminderToSave && notificationsEnabledToSave) {
+        console.log('Scheduling daily reminder...');
+        await scheduleDailyReminder(dailyReminderTimeToSave);
       } else {
+        console.log('Canceling daily reminder...');
         await cancelDailyReminder();
       }
       
@@ -83,24 +107,23 @@ const UserPage = () => {
     }
   };
 
-  const scheduleDailyReminder = async () => {
+  const scheduleDailyReminder = async (time?: string) => {
     try {
-      // Convert time string to Date object for today
-      const [hours, minutes] = dailyReminderTime.split(':').map(Number);
-      const reminderTime = new Date();
-      reminderTime.setHours(hours, minutes, 0, 0);
-      
-      // If the time has already passed today, schedule for tomorrow
-      if (reminderTime <= new Date()) {
-        reminderTime.setDate(reminderTime.getDate() + 1);
-      }
+      // Parse hour/minute from the configured or current time string and schedule a daily repeat
+      const timeToUse = time ?? dailyReminderTime;
+      const [hours, minutes] = timeToUse.split(':').map(Number);
+      console.log(`Scheduling daily repeating reminder at ${hours}:${String(minutes).padStart(2, '0')} (local time)`);
+      // Ensure any previously scheduled daily reminder is cleared first
+      await notificationService.cancelNotification(999);
 
       await notificationService.scheduleLocalNotification({
         title: 'PULSE Daily Reminder',
         body: 'Time to engage with your missional habits! Check your progress and stay on track.',
         id: 999, // Use a fixed ID for daily reminders
-        schedule: reminderTime,
+        schedule: { repeats: true, on: { hour: hours, minute: minutes } },
       });
+
+      console.log('Daily reminder scheduled successfully');
     } catch (error) {
       console.error('Error scheduling daily reminder:', error);
     }
@@ -141,10 +164,43 @@ const UserPage = () => {
     setTimeout(saveUserPreferences, 100);
   };
 
+  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+  const [pendingSaveTime, setPendingSaveTime] = useState<string | null>(null);
+
   const handleReminderTimeChange = (time: string) => {
-    setDailyReminderTime(time);
-    // Auto-save after a short delay
-    setTimeout(saveUserPreferences, 500);
+    console.log('handleReminderTimeChange called with:', time);
+    // Update temporary displayed value and mark as pending change; don't save yet
+    setTempReminderTime(time);
+    setPendingSaveTime(time);
+  };
+
+  const handleTimePickerFocus = () => {
+    console.log('handleTimePickerFocus called, current time:', dailyReminderTime);
+    setIsTimePickerOpen(true);
+    setTempReminderTime(dailyReminderTime);
+    setPendingSaveTime(null); // Clear any pending saves
+  };
+
+  const handleTimePickerBlur = () => {
+    console.log('handleTimePickerBlur called, pendingTime:', pendingSaveTime, 'currentTime:', dailyReminderTime);
+    setIsTimePickerOpen(false);
+    
+    // Only save if there's a pending time and it's different from current
+    if (pendingSaveTime && pendingSaveTime !== dailyReminderTime) {
+      console.log('Time changed, saving new time:', pendingSaveTime);
+      setDailyReminderTime(pendingSaveTime);
+      // Save with a short delay to ensure state is updated
+      setTimeout(() => {
+        console.log('Calling saveUserPreferences from timeout');
+        // Persist and schedule using the new time explicitly to avoid stale state
+        saveUserPreferences({ dailyReminderTime: pendingSaveTime });
+      }, 200);
+    } else {
+      console.log('No time change detected, not saving');
+      // Reset temp to current if no changes
+      setTempReminderTime(dailyReminderTime);
+    }
+    setPendingSaveTime(null);
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -555,20 +611,25 @@ const UserPage = () => {
                     <Clock className="h-4 w-4" />
                     Reminder Time
                   </Label>
-                  <div className="flex items-center gap-2">
+                  <div className="space-y-2">
                     <Input
                       id="reminder-time"
                       type="time"
-                      value={dailyReminderTime}
+                      value={isTimePickerOpen ? tempReminderTime : dailyReminderTime}
                       onChange={(e) => handleReminderTimeChange(e.target.value)}
+                      onFocus={handleTimePickerFocus}
+                      onBlur={handleTimePickerBlur}
                       className="w-32"
                     />
-                    <span className="text-sm text-muted-foreground">
-                      Daily reminder at {new Date(`2000-01-01T${dailyReminderTime}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    <div className="text-sm text-muted-foreground">
+                      Daily reminder at {new Date(`2000-01-01T${dailyReminderTime}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (local time)
+                      {isTimePickerOpen && tempReminderTime !== dailyReminderTime && (
+                        <span className="text-amber-600 ml-2">• Tap "Done" to save changes</span>
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    You'll receive a daily reminder to engage with your PULSE missional habits at this time.
+                    Tap the time above to change it. Your reminder will be saved when you tap "Done" on the time picker.
                   </p>
                 </div>
               )}

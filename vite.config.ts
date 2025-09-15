@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === 'development' && componentTagger(),
   ].filter(Boolean),
+  esbuild: {
+    // Drop console/debugger in production builds
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
+  },
   css: {
     postcss: "./postcss.config.cjs",
   },

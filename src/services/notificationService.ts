@@ -45,6 +45,8 @@ const initializeCapacitor = async () => {
   }
 };
 
+type DailyRepeat = { repeats: true; on: { hour: number; minute: number } };
+
 export interface NotificationService {
   requestPermissions(): Promise<boolean>;
   checkPermissions(): Promise<boolean>;
@@ -52,7 +54,7 @@ export interface NotificationService {
     title: string;
     body: string;
     id: number;
-    schedule?: Date;
+    schedule?: Date | DailyRepeat;
   }): Promise<void>;
   schedulePrayerReminder(personName: string, time: Date): Promise<void>;
   cancelNotification(id: number): Promise<void>;
@@ -104,7 +106,7 @@ class CapacitorNotificationService implements NotificationService {
     title: string;
     body: string;
     id: number;
-    schedule?: Date;
+    schedule?: Date | DailyRepeat;
   }): Promise<void> {
     try {
       if (!LocalNotifications) {
@@ -117,11 +119,11 @@ class CapacitorNotificationService implements NotificationService {
           title: options.title,
           body: options.body,
           id: options.id,
-          ...(options.schedule && {
-            schedule: {
-              at: options.schedule
-            }
-          })
+          ...(options.schedule && (
+            options.schedule instanceof Date
+              ? { schedule: { at: options.schedule } }
+              : { schedule: { repeats: true, on: { hour: options.schedule.on.hour, minute: options.schedule.on.minute } } }
+          ))
         }]
       };
       
@@ -149,7 +151,8 @@ class CapacitorNotificationService implements NotificationService {
         return;
       }
       
-      await LocalNotifications.cancel({ notifications: [{ id: id.toString() }] });
+      // Capacitor LocalNotifications expects a numeric ID
+      await LocalNotifications.cancel({ notifications: [{ id }] });
       console.log('Notification cancelled:', id);
     } catch (error) {
       console.error('Error cancelling notification:', error);
@@ -200,20 +203,38 @@ class WebNotificationService implements NotificationService {
     title: string;
     body: string;
     id: number;
-    schedule?: Date;
+    schedule?: Date | DailyRepeat;
   }): Promise<void> {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      if (options.schedule) {
-        const delay = options.schedule.getTime() - Date.now();
-        if (delay > 0) {
-          setTimeout(() => {
-            new Notification(options.title, { body: options.body });
-          }, delay);
-        }
-      } else {
-        new Notification(options.title, { body: options.body });
-      }
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+    if (!options.schedule) {
+      new Notification(options.title, { body: options.body });
+      return;
     }
+
+    if (options.schedule instanceof Date) {
+      const delay = options.schedule.getTime() - Date.now();
+      if (delay > 0) {
+        setTimeout(() => {
+          new Notification(options.title, { body: options.body });
+        }, delay);
+      }
+      return;
+    }
+
+    // Best-effort daily repeat in web: schedule next fire, then 24h intervals
+    const now = new Date();
+    const next = new Date();
+    next.setHours(options.schedule.on.hour, options.schedule.on.minute, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    const firstDelay = next.getTime() - now.getTime();
+    setTimeout(() => {
+      new Notification(options.title, { body: options.body });
+      // Subsequent fires approximately every 24h
+      setInterval(() => {
+        new Notification(options.title, { body: options.body });
+      }, 24 * 60 * 60 * 1000);
+    }, firstDelay);
   }
 
   async schedulePrayerReminder(personName: string, time: Date): Promise<void> {

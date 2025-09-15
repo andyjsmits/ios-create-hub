@@ -67,8 +67,11 @@ async function setupOAuthCallbackHandling() {
           const params = new URLSearchParams(urlObj.search);
           const fragmentParams = new URLSearchParams(urlObj.hash.substring(1));
           
-          console.log('Query params:', Object.fromEntries(params.entries()));
-          console.log('Fragment params:', Object.fromEntries(fragmentParams.entries()));
+          // Avoid logging tokens or sensitive callback params in production
+          if (import.meta.env.DEV) {
+            console.log('Query params (dev):', Object.fromEntries(params.entries()));
+            console.log('Fragment param keys (dev):', Array.from(fragmentParams.keys()));
+          }
           
           // Handle authorization code
           const code = params.get('code');
@@ -79,7 +82,9 @@ async function setupOAuthCallbackHandling() {
             if (error) {
               console.error('Code exchange error:', error);
             } else if (data.session) {
-              console.log('Auth success via code exchange:', data.session);
+              if (import.meta.env.DEV) {
+                console.log('Auth success via code exchange (dev)');
+              }
               setTimeout(() => {
                 window.location.href = '/';
               }, 500);
@@ -99,7 +104,9 @@ async function setupOAuthCallbackHandling() {
               if (error) {
                 console.error('Session setup error:', error);
               } else if (data.session) {
-                console.log('Auth success via access token:', data.session);
+                if (import.meta.env.DEV) {
+                  console.log('Auth success via access token (dev)');
+                }
                 setTimeout(() => {
                   window.location.href = '/';
                 }, 500);

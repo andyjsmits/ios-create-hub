@@ -252,10 +252,7 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
 
       {/* Prayer Manager Dialog */}
       <Dialog open={showPrayerManager} onOpenChange={setShowPrayerManager}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Prayer List Manager</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-2xl w-full h-full sm:h-[90vh] max-h-screen p-0 gap-0 overflow-hidden">
           <PrayerManager prayerList={habitData.prayerList || []} onUpdatePrayerList={updatePrayerList} onClose={() => setShowPrayerManager(false)} />
         </DialogContent>
       </Dialog>
