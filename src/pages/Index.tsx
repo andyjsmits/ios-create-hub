@@ -262,16 +262,20 @@ const Index = () => {
             <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
               <Card className="aspect-square bg-white/80 border-white/70 text-black backdrop-blur-md rounded-2xl flex items-center justify-center shadow-md">
                 <div className="flex flex-col items-center">
-                  <div className="p-3 rounded-xl bg-black/10 mb-2"><Flame className="h-6 w-6 text-primary" /></div>
-                  <div className="text-3xl font-black">{streak}</div>
-                  <div className="text-xs uppercase tracking-wide opacity-90">Day Streak</div>
+                  <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-3">
+                    <Flame className="h-10 w-10 text-white" strokeWidth={3} />
+                  </div>
+                  <div className="text-4xl font-black">{streak}</div>
+                  <div className="text-sm uppercase tracking-wide opacity-90">Day Streak</div>
                 </div>
               </Card>
               <Card className="aspect-square bg-white/80 border-white/70 text-black backdrop-blur-md rounded-2xl flex items-center justify-center shadow-md">
                 <div className="flex flex-col items-center">
-                  <div className="p-3 rounded-xl bg-black/10 mb-2"><Trophy className="h-6 w-6 text-primary" /></div>
-                  <div className="text-3xl font-black">{weeklyProgress.habitsCounted.size}/5</div>
-                  <div className="text-xs uppercase tracking-wide opacity-90 text-center">Weekly Habits</div>
+                  <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-3">
+                    <Trophy className="h-10 w-10 text-white" strokeWidth={3} />
+                  </div>
+                  <div className="text-4xl font-black">{weeklyProgress.habitsCounted.size}/5</div>
+                  <div className="text-sm uppercase tracking-wide opacity-90 text-center">Weekly Habits</div>
                 </div>
               </Card>
             </div>
