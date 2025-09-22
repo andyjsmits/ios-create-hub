@@ -25,13 +25,19 @@ fi
 echo "Web app dir: $WEB_DIR"
 cd "$WEB_DIR"
 
-# 2) Verify Node is available (Xcode Cloud images include Node). Do not install.
+# 2) Ensure Node is available. If missing (as on some Xcode Cloud images), install a user-scoped Node via nvm.
 if ! command -v node >/dev/null 2>&1; then
-  echo "ERROR: Node.js is not available on PATH. Ensure your Xcode Cloud image includes Node."
-  exit 1
+  echo "Node not found; installing user-scoped Node via nvm..."
+  export NVM_DIR="$HOME/.nvm"
+  mkdir -p "$NVM_DIR"
+  curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+  # shellcheck disable=SC1090
+  . "$NVM_DIR/nvm.sh"
+  nvm install --lts
+  nvm use --lts
 fi
-node -v
-npm -v
+node -v || true
+npm -v || true
 
 # 3) Use Corepack shims directly (no global enable to avoid symlink permission issues on CI)
 #    We intentionally skip `corepack enable` to prevent EPERM errors in restricted environments.
