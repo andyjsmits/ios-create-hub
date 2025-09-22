@@ -34,6 +34,7 @@
 		"SignInWithApple",
 		"AppPlugin",
 		"CAPBrowserPlugin",
+		"HapticsPlugin",
 		"LocalNotificationsPlugin",
 		"PushNotificationsPlugin",
 		"SplashScreenPlugin"

@@ -1,21 +1,26 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { HabitCard } from "@/components/HabitCard";
-import { OverviewStats } from "@/components/OverviewStats";
 import { PrayerManager } from "@/components/PrayerManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useHabits, PrayerPerson } from "@/hooks/useHabits";
+import { PrayerKickstartCard } from "@/components/PrayerKickstartCard";
 import { useHabitTracking } from "@/hooks/useHabitTracking";
-import { MessageCircle, Book, Ear, HandHeart, Volume2, Settings } from "lucide-react";
+import { MessageCircle, Book, Ear, HandHeart, MessageSquareQuote, Settings, Flame, Trophy } from "lucide-react";
 import p2cLogo from "@/assets/p2c-students-logos.png";
+import { supabase } from "@/integrations/supabase/client";
+import { OnboardingDialog } from "@/components/OnboardingDialog";
+import { useToast } from "@/hooks/use-toast";
+import { GuidedTour } from "@/components/GuidedTour";
+import { notificationService } from "@/services/notificationService";
 
 const Index = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   
   // Get habit data for all habits
-  const { habitData: prayHabitData, loading: prayLoading, updatePrayerList } = useHabits('pray');
+  const { habitData: prayHabitData, loading: prayLoading, updatePrayerList, saveHabitData: savePrayData } = useHabits('pray');
   const { habitData: unionHabitData, loading: unionLoading } = useHabits('union');
   const { habitData: listenHabitData, loading: listenLoading } = useHabits('listen');
   const { habitData: serveHabitData, loading: serveLoading } = useHabits('serve');
@@ -25,6 +30,10 @@ const Index = () => {
   const { toggleHabitCompletion, isHabitCompletedToday: isCompletedFromTracking, loading: trackingLoading } = useHabitTracking();
 
   const [showPrayerManager, setShowPrayerManager] = useState(false);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+  const { toast } = useToast();
 
   // Get prayer list from database or use empty array
   const prayerList = prayHabitData.prayerList || [];
@@ -34,6 +43,31 @@ const Index = () => {
       navigate("/auth");
     }
   }, [user, loading, navigate]);
+
+  // Load profile for greeting and onboarding check
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('display_name, onboarded')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (data) {
+        setDisplayName(data.display_name);
+        if (!data.onboarded) setShowOnboarding(true);
+      } else {
+        setShowOnboarding(true);
+      }
+      // Show tour after onboarding has been completed or skipped
+      try {
+        const tourDone = localStorage.getItem('tourCompleted') === 'true';
+        if (!tourDone) setShowTour(true);
+      } catch {}
+    };
+    fetchProfile();
+  }, [user]);
 
   const allLoading = loading || prayLoading || unionLoading || listenLoading || serveLoading || echoLoading || trackingLoading;
 
@@ -167,7 +201,7 @@ const Index = () => {
     echo: {
       title: "Echo",
       description: "Speak back who God is",
-      icon: <Volume2 className="h-6 w-6 text-white" />,
+      icon: <MessageSquareQuote className="h-6 w-6 text-white" />,
       type: "testimony" as const,
       gradient: "var(--gradient-orange)",
       details: "Give voice to God's goodness and character",
@@ -199,14 +233,11 @@ const Index = () => {
   };
 
   // Calculate stats from real data
-  const totalHabits = Object.keys(pulseHabits).length;
-  const todayCompletions = Object.values(pulseHabits).filter(habit => habit.completed).length;
   const streak = calculateStreak();
   const weeklyProgress = calculateWeeklyProgress();
-  const weeklyGoalMet = weeklyProgress.completed;
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
       {/* P2C Students Hero */}
       <div className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
         <div className="relative container mx-auto px-6 py-16 text-center text-white">
@@ -220,32 +251,41 @@ const Index = () => {
                 MISSIONAL HABITS
               </span>
             </h1>
+            {displayName && (
+              <p className="text-xl font-semibold mb-4">Welcome back, {displayName}!</p>
+            )}
             <p className="text-xl md:text-2xl font-medium max-w-3xl mx-auto leading-relaxed mb-8">
               Five practices to deepen your faith and impact your world
             </p>
-            <div className="inline-flex items-center gap-3 px-8 py-4 bg-black/20 backdrop-blur-md rounded-2xl border border-white/20">
-              <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
-              <span className="text-lg font-semibold">
-                {new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </span>
+            {/* Streak trackers moved to hero area (replacing date) */}
+            <div className="flex flex-wrap justify-center gap-4">
+              <div className="inline-flex items-center gap-3 px-6 py-4 bg-black/20 backdrop-blur-md rounded-2xl border border-white/20">
+                <div className="p-2 rounded-lg bg-white/10"><Flame className="h-5 w-5 text-white" /></div>
+                <div className="text-left">
+                  <div className="text-sm opacity-90">Day Streak</div>
+                  <div className="text-xl font-bold">{streak}</div>
+                </div>
+              </div>
+              <div className="inline-flex items-center gap-3 px-6 py-4 bg-black/20 backdrop-blur-md rounded-2xl border border-white/20">
+                <div className="p-2 rounded-lg bg-white/10"><Trophy className="h-5 w-5 text-white" /></div>
+                <div className="text-left">
+                  <div className="text-sm opacity-90">Weekly Habit Streak</div>
+                  <div className="text-xl font-bold">{weeklyProgress.habitsCounted.size}/5</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-6 py-12 max-w-7xl">
-        {/* Overview Stats */}
-        <div className="mb-12">
-          <OverviewStats 
-            totalCompleted={todayCompletions}
-            totalHabits={totalHabits}
-            streak={streak}
-            weeklyGoal={weeklyProgress.habitsCounted.size}
-            weeklyGoalMet={weeklyGoalMet}
+        {/* Overview Stats removed from here; streak trackers moved to hero */}
+
+        {/* 7-Day Prayer Kickstart */}
+        <div className="mb-8">
+          <PrayerKickstartCard
+            kickstart={prayHabitData.kickstart}
+            save={(data) => savePrayData({ ...(prayHabitData || {}), ...data })}
           />
         </div>
 
@@ -300,6 +340,56 @@ const Index = () => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* First-time Onboarding Dialog */}
+      {user && (
+        <OnboardingDialog
+          userId={user.id}
+          open={showOnboarding}
+          onClose={() => {
+            setShowOnboarding(false);
+            // refresh name after closing
+            (async () => {
+              const { data } = await supabase
+                .from('profiles')
+                .select('display_name')
+                .eq('id', user.id)
+                .single();
+              if (data?.display_name) setDisplayName(data.display_name);
+            })();
+          }}
+        />
+      )}
+
+      {/* First-Run Guided Tour */}
+      {user && (
+        <GuidedTour
+          open={showTour && !showOnboarding}
+          onClose={() => setShowTour(false)}
+          onStartPrayer={() => {
+            try { localStorage.setItem('openPrayerManager', 'true'); } catch {}
+            setShowTour(false);
+            navigate('/habits/pray');
+          }}
+          onStartKickstart={async () => {
+            const todayIso = new Date().toISOString().split('T')[0];
+            await savePrayData({ kickstart: { startedAt: todayIso, daysCompleted: [] } as any });
+            toast({ title: 'Kickstart started', description: 'We’ll prompt a small step each day for 7 days.' });
+            try {
+              const t = (localStorage.getItem('dailyReminderTime') || '09:00');
+              const [h, m] = t.split(':').map(Number);
+              await notificationService.scheduleLocalNotification({
+                title: 'PULSE Kickstart',
+                body: 'Today’s prayer step is ready.',
+                id: 998,
+                schedule: { repeats: true, on: { hour: h || 9, minute: m || 0 } }
+              });
+            } catch {}
+            setShowTour(false);
+            navigate('/');
+          }}
+        />
+      )}
 
     </div>
   );

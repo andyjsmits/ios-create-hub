@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Book, Ear, HandHeart, Volume2, ArrowRight } from "lucide-react";
+import { MessageCircle, Book, Ear, HandHeart, MessageSquareQuote, ArrowRight } from "lucide-react";
 
 const HabitsPage = () => {
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ const HabitsPage = () => {
       key: "echo",
       title: "Echo",
       description: "Speak back who God is",
-      icon: <Volume2 className="h-6 w-6 text-white" />,
+      icon: <MessageSquareQuote className="h-6 w-6 text-white" />,
       gradient: "var(--gradient-orange)",
       route: "/habits/echo",
     },

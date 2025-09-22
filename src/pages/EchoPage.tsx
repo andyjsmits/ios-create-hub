@@ -6,14 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Volume2, Mic, Share, Calendar, CheckCircle } from "lucide-react";
+import { ArrowLeft, MessageSquareQuote, Mic, Share, Calendar, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { impactMedium, notifySuccess } from "@/lib/haptics";
 import { useHabits } from "@/hooks/useHabits";
+import { useHabitTracking } from "@/hooks/useHabitTracking";
 
 const EchoPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { habitData, loading, saveHabitData } = useHabits('echo');
+  const { toggleHabitCompletion } = useHabitTracking();
   
   const [echoNotes, setEchoNotes] = useState('');
   
@@ -70,6 +73,11 @@ const EchoPage = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     await saveHabitData({ trackingHistory: updatedHistory });
+    try { await toggleHabitCompletion('echo'); } catch {}
+    try {
+      const newWeekly = currentWeekCompletions + 1;
+      if (newWeekly >= weeklyGoal) { impactMedium(); notifySuccess(); }
+    } catch {}
     setEchoNotes('');
     
     toast({
@@ -91,20 +99,25 @@ const EchoPage = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="relative overflow-hidden" style={{ background: 'var(--gradient-orange)' }}>
-        <div className="relative container mx-auto px-6 py-16 text-center text-white">
-          <Button 
-            onClick={() => navigate('/')}
-            variant="ghost" 
-            className="absolute top-6 left-6 text-white hover:bg-white/10"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to PULSE
-          </Button>
-          
+        <div
+          className="relative container mx-auto px-6 text-center text-white"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)', paddingBottom: '16px' }}
+        >
+          <div className="flex items-center justify-start">
+            <Button
+              onClick={() => navigate('/')}
+              variant="ghost"
+              className="text-white hover:bg-white/10 px-3 py-2"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back to PULSE
+            </Button>
+          </div>
+
           <div className="mb-8">
             <div className="inline-flex items-center gap-4 mb-6">
               <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
-                <Volume2 className="h-8 w-8 text-white" />
+                <MessageSquareQuote className="h-8 w-8 text-white" />
               </div>
             </div>
             <h1 className="text-4xl md:text-5xl font-display font-black mb-6 leading-tight">
@@ -117,7 +130,7 @@ const EchoPage = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-12 max-w-4xl">
+      <div className="container mx-auto px-6 py-12 max-w-4xl" style={{ paddingBottom: 'calc(3rem + env(safe-area-inset-bottom))' }}>
         {/* About This Habit */}
         <Card className="mb-8">
           <CardHeader>
