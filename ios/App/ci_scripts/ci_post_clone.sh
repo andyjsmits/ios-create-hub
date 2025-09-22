@@ -25,32 +25,28 @@ fi
 echo "Web app dir: $WEB_DIR"
 cd "$WEB_DIR"
 
-# 2) Ensure Node without sudo (use nvm)
+# 2) Verify Node is available (Xcode Cloud images include Node). Do not install.
 if ! command -v node >/dev/null 2>&1; then
-  echo "Node not found; installing via nvm..."
-  curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-  # shellcheck disable=SC1090
-  . "${HOME}/.nvm/nvm.sh"
-  nvm install --lts
-  nvm use --lts
+  echo "ERROR: Node.js is not available on PATH. Ensure your Xcode Cloud image includes Node."
+  exit 1
 fi
-node -v || true
-npm -v || true
+node -v
+npm -v
 
-# 3) Enable Corepack (so yarn/pnpm work if lockfiles exist)
-corepack enable || true
+# 3) Use Corepack shims directly (no global enable to avoid symlink permission issues on CI)
+#    We intentionally skip `corepack enable` to prevent EPERM errors in restricted environments.
 
 # 4) Install dependencies using the right manager
 if [ -f yarn.lock ]; then
-  echo "Using yarn"
-  corepack yarn --version
+  echo "Using yarn via corepack"
+  corepack yarn --version || true
   corepack yarn install --frozen-lockfile
 elif [ -f pnpm-lock.yaml ]; then
-  echo "Using pnpm"
-  corepack pnpm --version
+  echo "Using pnpm via corepack"
+  corepack pnpm --version || true
   corepack pnpm install --frozen-lockfile
 else
-  echo "Using npm"
+  echo "Using npm (ci)"
   npm ci
 fi
 
