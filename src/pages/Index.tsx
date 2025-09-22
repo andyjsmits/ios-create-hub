@@ -260,16 +260,16 @@ const Index = () => {
             </p>
             {/* Streak trackers moved to hero area (side-by-side square boxes) */}
             <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-              <Card className="aspect-square bg-black/20 border-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+              <Card className="aspect-square bg-white/80 border-white/70 text-black backdrop-blur-md rounded-2xl flex items-center justify-center shadow-md">
                 <div className="flex flex-col items-center">
-                  <div className="p-3 rounded-xl bg-white/10 mb-2"><Flame className="h-6 w-6 text-white" /></div>
+                  <div className="p-3 rounded-xl bg-black/10 mb-2"><Flame className="h-6 w-6 text-primary" /></div>
                   <div className="text-3xl font-black">{streak}</div>
                   <div className="text-xs uppercase tracking-wide opacity-90">Day Streak</div>
                 </div>
               </Card>
-              <Card className="aspect-square bg-black/20 border-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+              <Card className="aspect-square bg-white/80 border-white/70 text-black backdrop-blur-md rounded-2xl flex items-center justify-center shadow-md">
                 <div className="flex flex-col items-center">
-                  <div className="p-3 rounded-xl bg-white/10 mb-2"><Trophy className="h-6 w-6 text-white" /></div>
+                  <div className="p-3 rounded-xl bg-black/10 mb-2"><Trophy className="h-6 w-6 text-primary" /></div>
                   <div className="text-3xl font-black">{weeklyProgress.habitsCounted.size}/5</div>
                   <div className="text-xs uppercase tracking-wide opacity-90 text-center">Weekly Habits</div>
                 </div>
@@ -281,6 +281,14 @@ const Index = () => {
 
       <div className="container mx-auto px-6 py-12 max-w-7xl">
         {/* Streak trackers are now in the hero; no overview stats here */}
+
+        {/* 7-Day Prayer Kickstart at top of content */}
+        <div className="mb-8">
+          <PrayerKickstartCard
+            kickstart={prayHabitData.kickstart}
+            save={(data) => savePrayData({ ...(prayHabitData || {}), ...data })}
+          />
+        </div>
 
         {/* PULSE Habit Cards */}
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 mb-16">
@@ -300,7 +308,7 @@ const Index = () => {
           ))}
         </div>
 
-        {/* P2C-style Call to Action */}
+        {/* P2C-style Call to Action */
         <div className="text-center">
           <div className="max-w-4xl mx-auto p-10 rounded-2xl border border-border shadow-lg bg-card">
             <div className="mb-6">
@@ -322,13 +330,7 @@ const Index = () => {
           </div>
         </div>
 
-        {/* 7-Day Prayer Kickstart at bottom */}
-        <div className="mt-12 mb-4">
-          <PrayerKickstartCard
-            kickstart={prayHabitData.kickstart}
-            save={(data) => savePrayData({ ...(prayHabitData || {}), ...data })}
-          />
-        </div>
+        
       </div>
 
       {/* Prayer Manager Dialog */}
