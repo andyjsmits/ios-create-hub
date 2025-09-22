@@ -308,7 +308,7 @@ const Index = () => {
           ))}
         </div>
 
-        {/* P2C-style Call to Action */
+        {/* P2C-style Call to Action */}
         <div className="text-center">
           <div className="max-w-4xl mx-auto p-10 rounded-2xl border border-border shadow-lg bg-card">
             <div className="mb-6">
