@@ -8,6 +8,7 @@ import { useHabits, PrayerPerson } from "@/hooks/useHabits";
 import { PrayerKickstartCard } from "@/components/PrayerKickstartCard";
 import { useHabitTracking } from "@/hooks/useHabitTracking";
 import { MessageCircle, Book, Ear, HandHeart, MessageSquareQuote, Settings, Flame, Trophy } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import p2cLogo from "@/assets/p2c-students-logos.png";
 import { supabase } from "@/integrations/supabase/client";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
@@ -257,37 +258,29 @@ const Index = () => {
             <p className="text-xl md:text-2xl font-medium max-w-3xl mx-auto leading-relaxed mb-8">
               Five practices to deepen your faith and impact your world
             </p>
-            {/* Streak trackers moved to hero area (replacing date) */}
-            <div className="flex flex-wrap justify-center gap-4">
-              <div className="inline-flex items-center gap-3 px-6 py-4 bg-black/20 backdrop-blur-md rounded-2xl border border-white/20">
-                <div className="p-2 rounded-lg bg-white/10"><Flame className="h-5 w-5 text-white" /></div>
-                <div className="text-left">
-                  <div className="text-sm opacity-90">Day Streak</div>
-                  <div className="text-xl font-bold">{streak}</div>
+            {/* Streak trackers moved to hero area (side-by-side square boxes) */}
+            <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+              <Card className="aspect-square bg-black/20 border-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                <div className="flex flex-col items-center">
+                  <div className="p-3 rounded-xl bg-white/10 mb-2"><Flame className="h-6 w-6 text-white" /></div>
+                  <div className="text-3xl font-black">{streak}</div>
+                  <div className="text-xs uppercase tracking-wide opacity-90">Day Streak</div>
                 </div>
-              </div>
-              <div className="inline-flex items-center gap-3 px-6 py-4 bg-black/20 backdrop-blur-md rounded-2xl border border-white/20">
-                <div className="p-2 rounded-lg bg-white/10"><Trophy className="h-5 w-5 text-white" /></div>
-                <div className="text-left">
-                  <div className="text-sm opacity-90">Weekly Habit Streak</div>
-                  <div className="text-xl font-bold">{weeklyProgress.habitsCounted.size}/5</div>
+              </Card>
+              <Card className="aspect-square bg-black/20 border-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                <div className="flex flex-col items-center">
+                  <div className="p-3 rounded-xl bg-white/10 mb-2"><Trophy className="h-6 w-6 text-white" /></div>
+                  <div className="text-3xl font-black">{weeklyProgress.habitsCounted.size}/5</div>
+                  <div className="text-xs uppercase tracking-wide opacity-90 text-center">Weekly Habits</div>
                 </div>
-              </div>
+              </Card>
             </div>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-6 py-12 max-w-7xl">
-        {/* Overview Stats removed from here; streak trackers moved to hero */}
-
-        {/* 7-Day Prayer Kickstart */}
-        <div className="mb-8">
-          <PrayerKickstartCard
-            kickstart={prayHabitData.kickstart}
-            save={(data) => savePrayData({ ...(prayHabitData || {}), ...data })}
-          />
-        </div>
+        {/* Streak trackers are now in the hero; no overview stats here */}
 
         {/* PULSE Habit Cards */}
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 mb-16">
@@ -327,6 +320,14 @@ const Index = () => {
               <div className="h-1 w-12 bg-primary rounded-full"></div>
             </div>
           </div>
+        </div>
+
+        {/* 7-Day Prayer Kickstart at bottom */}
+        <div className="mt-12 mb-4">
+          <PrayerKickstartCard
+            kickstart={prayHabitData.kickstart}
+            save={(data) => savePrayData({ ...(prayHabitData || {}), ...data })}
+          />
         </div>
       </div>
 
