@@ -12,11 +12,18 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { notificationService } from "@/services/notificationService";
+import { selection, notifySuccess } from "@/lib/haptics";
+import { CAMPUSES } from "@/lib/campuses";
 
 const UserPage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  // Profile fields
+  const [profileName, setProfileName] = useState("");
+  const [profileInvolved, setProfileInvolved] = useState(false);
+  const [profileCampus, setProfileCampus] = useState<string>("");
+  const [profileLoading, setProfileLoading] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [dailyReminder, setDailyReminder] = useState(true);
   const [dailyReminderTime, setDailyReminderTime] = useState("09:00");
@@ -32,8 +39,68 @@ const UserPage = () => {
   useEffect(() => {
     if (user) {
       loadUserPreferences();
+      loadUserProfile();
     }
   }, [user]);
+
+  const loadUserProfile = async () => {
+    try {
+      setProfileLoading(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('display_name, involved_in_p2c, involved_campus')
+        .eq('id', user?.id)
+        .single();
+      if (!error && data) {
+        setProfileName(data.display_name || "");
+        setProfileInvolved(!!data.involved_in_p2c);
+        setProfileCampus(data.involved_campus || "");
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const saveUserProfile = async () => {
+    if (!user) return;
+    try {
+      setProfileLoading(true);
+      // Try UPDATE first (succeeds with typical RLS policies)
+      const { error: updateError, count } = await supabase
+        .from('profiles')
+        .update({
+          display_name: profileName || null,
+          involved_in_p2c: profileInvolved,
+          involved_campus: profileInvolved ? (profileCampus || null) : null,
+          onboarded: true,
+        })
+        .eq('id', user.id)
+        .select('id', { count: 'exact', head: true });
+
+      if (updateError) throw updateError;
+
+      if (!count || count === 0) {
+        // Create via security definer RPC to bypass RLS insert restrictions
+        const { error: rpcError } = await supabase.rpc('ensure_profile', {
+          p_display_name: profileName || null,
+          p_involved: profileInvolved,
+        } as any);
+        if (rpcError) throw rpcError;
+      }
+
+      toast({ title: 'Profile Saved', description: 'Your profile has been updated.' });
+    } catch (error: any) {
+      console.error('Error saving profile:', error);
+      const msg = /row-level security/i.test(error?.message || '')
+        ? 'Profile could not be created due to security rules. Please sign out and sign back in to initialize your profile, then try again.'
+        : (error.message || 'Failed to save profile');
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   // Temporary time value while editing in the picker
   const [tempReminderTime, setTempReminderTime] = useState(dailyReminderTime);
@@ -97,6 +164,7 @@ const UserPage = () => {
         title: "Settings Saved",
         description: "Your notification preferences have been updated.",
       });
+      try { notifySuccess(); } catch {}
     } catch (error) {
       console.error('Error saving user preferences:', error);
       toast({
@@ -156,12 +224,14 @@ const UserPage = () => {
     
     // Auto-save when toggled
     setTimeout(saveUserPreferences, 100);
+    try { selection(); } catch {}
   };
 
   const handleDailyReminderToggle = async (enabled: boolean) => {
     setDailyReminder(enabled);
     // Auto-save when toggled
     setTimeout(saveUserPreferences, 100);
+    try { selection(); } catch {}
   };
 
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
@@ -213,7 +283,7 @@ const UserPage = () => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`
+            emailRedirectTo: `${window.location.origin}/auth`
           }
         });
         if (error) throw error;
@@ -244,10 +314,10 @@ const UserPage = () => {
 
   const handleGoogleSignIn = async () => {
     try {
-      const isNative = window.location.protocol === 'capacitor:';
+      const isNative = window.location.protocol === 'capacitor:' || !!(window as any).Capacitor;
       const redirectTo = isNative 
         ? 'app.smits.pulse://auth/callback' 
-        : `${window.location.origin}/user`;
+        : `${window.location.origin}/auth`;
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -291,10 +361,10 @@ const UserPage = () => {
 
   const handleAppleSignIn = async () => {
     try {
-      const isNative = window.location.protocol === 'capacitor:';
+      const isNative = window.location.protocol === 'capacitor:' || !!(window as any).Capacitor;
       const redirectTo = isNative 
         ? 'app.smits.pulse://auth/callback' 
-        : `${window.location.origin}/user`;
+        : `${window.location.origin}/auth`;
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
@@ -359,9 +429,18 @@ const UserPage = () => {
         description: "Your account and all associated data have been permanently deleted.",
       });
 
-      // Sign out and redirect to auth page
-      // Note: The user will already be signed out since their account was deleted
-      navigate('/auth');
+      // Immediately sign out locally and redirect to auth
+      try { await supabase.auth.signOut({ scope: 'global' } as any); } catch {}
+      try {
+        // Clear any local settings that might keep state around
+        localStorage.removeItem('notificationsEnabled');
+        localStorage.removeItem('dailyReminder');
+        localStorage.removeItem('dailyReminderTime');
+        localStorage.removeItem('tourCompleted');
+        localStorage.removeItem('openPrayerManager');
+      } catch {}
+      // Use hard redirect to fully reset app state
+      window.location.href = '/auth';
       
     } catch (error: any) {
       console.error('Account deletion error:', error);
@@ -547,6 +626,22 @@ const UserPage = () => {
     <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-6 py-8">
         <div className="max-w-2xl mx-auto space-y-6">
+          {/* Beta Notice */}
+          <Card className="border-amber-300/50">
+            <CardHeader>
+              <CardTitle className="text-amber-700">This app is in Beta</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>
+                Thanks for helping us test PULSE. We’re actively improving the experience and your feedback helps us a ton.
+              </p>
+              <p>
+                Have suggestions or found an issue? Please email
+                {' '}
+                <a href="mailto:p2c-pulse-feedback@p2c.com" className="text-primary underline">p2c-pulse-feedback@p2c.com</a>.
+              </p>
+            </CardContent>
+          </Card>
           {/* User Profile */}
           <Card>
             <CardHeader>
@@ -555,15 +650,64 @@ const UserPage = () => {
                 Profile
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="display-name">Name</Label>
+                <Input
+                  id="display-name"
+                  placeholder="Your name"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  disabled={profileLoading}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Used to personalize your greeting.</p>
+              </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="p2c-involved">Involved with Power to Change?</Label>
+              <p className="text-sm text-muted-foreground">Toggle if you’re part of a P2C ministry</p>
+            </div>
+            <Switch
+              id="p2c-involved"
+              checked={profileInvolved}
+              onCheckedChange={setProfileInvolved}
+              disabled={profileLoading}
+            />
+          </div>
+          {profileInvolved && (
+            <div className="space-y-2">
+              <Label htmlFor="campus-select">Campus</Label>
+              <select
+                id="campus-select"
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-base"
+                value={profileCampus}
+                onChange={(e) => setProfileCampus(e.target.value)}
+                disabled={profileLoading}
+              >
+                <option value="">Choose a campus…</option>
+                {CAMPUSES.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              {profileCampus === 'Other' && (
+                <Input
+                  placeholder="Type your campus name"
+                  value={profileCampus === 'Other' ? '' : profileCampus}
+                  onChange={(e) => setProfileCampus(e.target.value)}
+                  disabled={profileLoading}
+                />
+              )}
+            </div>
+          )}
+
+              <div className="flex gap-2">
+                <Button onClick={saveUserProfile} disabled={profileLoading}>
+                  {profileLoading ? 'Saving…' : 'Save Profile'}
+                </Button>
+                <div className="ml-auto text-right">
+                  <Label className="text-sm font-medium text-muted-foreground block">Email</Label>
                   <p className="text-sm">{user.email}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">User ID</Label>
-                  <p className="text-sm font-mono">{user.id}</p>
                 </div>
               </div>
             </CardContent>
@@ -686,7 +830,7 @@ const UserPage = () => {
         
         {/* Version indicator */}
         <div className="text-center mt-8 pb-4">
-          <p className="text-xs text-muted-foreground/60">v1.15.215</p>
+          <p className="text-xs text-muted-foreground/60">v1.17.0</p>
         </div>
       </div>
     </div>

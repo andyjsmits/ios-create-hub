@@ -242,6 +242,20 @@ const Index = () => {
       {/* P2C Students Hero */}
       <div className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
         <div className="relative container mx-auto px-6 py-16 text-center text-white">
+          {/* Beta Sticker */}
+          <div className="absolute top-4 right-4 pointer-events-none select-none">
+            {/* Try to load provided sticker from public root; fallback to a small BETA badge */}
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+            <img
+              src="/beta-sticker.png"
+              className="h-12 w-auto drop-shadow-lg hidden"
+              onLoad={(e) => ((e.currentTarget as HTMLImageElement).classList.remove('hidden'))}
+              onError={(e) => ((e.currentTarget.parentElement?.querySelector('[data-fallback="beta"]') as HTMLElement)?.classList.remove('hidden'))}
+            />
+            <span data-fallback="beta" className="hidden inline-block text-xs font-bold uppercase tracking-wide bg-white/90 text-black px-2 py-1 rounded-md shadow">
+              Beta
+            </span>
+          </div>
           <div className="mb-8">
             <div className="inline-flex items-center gap-4 mb-6">
               <img src={p2cLogo} alt="P2C Students" className="h-16 w-auto filter brightness-0 invert" />
