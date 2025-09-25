@@ -41,6 +41,8 @@ const EchoPage = () => {
     return entryDate >= weekStart && entryDate <= weekEnd && entry.completed;
   }).length;
 
+  const localDateStr = (d: Date = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
   const handleMarkCompleted = async () => {
     if (!echoNotes.trim()) {
       toast({
@@ -51,7 +53,7 @@ const EchoPage = () => {
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     const todayEntry = trackingHistory.find(entry => entry.date === today);
     
     if (todayEntry?.completed) {

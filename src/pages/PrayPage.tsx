@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHabitTracking } from "@/hooks/useHabitTracking";
 import { usePrayerTracking } from "@/hooks/usePrayerTracking";
 import { PrayerManager } from "@/components/PrayerManager";
+import { notificationService } from "@/services/notificationService";
 import { PrayerTracker } from "@/components/PrayerTracker";
 const PrayPage = () => {
   const navigate = useNavigate();
@@ -26,7 +27,8 @@ const PrayPage = () => {
     habitData,
     loading,
     updateResources,
-    updatePrayerList
+    updatePrayerList,
+    saveHabitData
   } = useHabits('pray');
   const {
     toggleHabitCompletion,
@@ -80,6 +82,16 @@ const PrayPage = () => {
     // Convert to array and sort by date (newest first)
     return Array.from(historyMap.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10); // Show last 10 entries
   };
+  
+  // Open Prayer Manager when directed from the guided tour
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('openPrayerManager') === 'true') {
+        setShowPrayerManager(true);
+        localStorage.removeItem('openPrayerManager');
+      }
+    } catch {}
+  }, []);
   const prayerHistory = getPrayerHistory();
   const addResource = () => {
     if (!user) {
@@ -139,12 +151,17 @@ const PrayPage = () => {
       <div className="relative overflow-hidden" style={{
       background: 'var(--gradient-yellow)'
     }}>
-        <div className="relative container mx-auto px-6 py-16 text-center text-white">
-          <Button onClick={() => navigate('/')} variant="ghost" className="absolute top-6 left-6 text-white hover:bg-white/10">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to PULSE
-          </Button>
-          
+        <div
+          className="relative container mx-auto px-6 text-center text-white"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)', paddingBottom: '16px' }}
+        >
+          <div className="flex items-center justify-start">
+            <Button onClick={() => navigate('/')} variant="ghost" className="text-white hover:bg-white/10 px-3 py-2">
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back to PULSE
+            </Button>
+          </div>
+
           <div className="mb-8">
             <div className="inline-flex items-center gap-4 mb-6">
               <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
@@ -161,7 +178,7 @@ const PrayPage = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-12 max-w-4xl">
+      <div className="container mx-auto px-6 py-12 max-w-4xl" style={{ paddingBottom: 'calc(3rem + env(safe-area-inset-bottom))' }}>
         {/* Prayer Activity Tracker */}
         <PrayerTracker prayerList={habitData.prayerList || []} onToggleHabitCompletion={handleToggleHabitCompletion} isHabitCompletedToday={isHabitCompletedToday('pray')} onOpenPrayerManager={() => setShowPrayerManager(true)} />
 
@@ -253,7 +270,28 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
       {/* Prayer Manager Dialog */}
       <Dialog open={showPrayerManager} onOpenChange={setShowPrayerManager}>
         <DialogContent className="sm:max-w-2xl w-full h-full sm:h-[90vh] max-h-screen p-0 gap-0 overflow-hidden">
-          <PrayerManager prayerList={habitData.prayerList || []} onUpdatePrayerList={updatePrayerList} onClose={() => setShowPrayerManager(false)} />
+          <PrayerManager
+            prayerList={habitData.prayerList || []}
+            onUpdatePrayerList={updatePrayerList}
+            onClose={() => setShowPrayerManager(false)}
+            onStartKickstart={() => {
+              const localDateStr = (d: Date = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+              const todayIso = localDateStr();
+              saveHabitData({ kickstart: { startedAt: todayIso, daysCompleted: [] } as any });
+              setShowPrayerManager(false);
+              toast({ title: 'Kickstart started', description: 'We’ll prompt a small step each day for 7 days.' });
+              try {
+                const t = (localStorage.getItem('dailyReminderTime') || '09:00');
+                const [h, m] = t.split(':').map(Number);
+                notificationService.scheduleLocalNotification({
+                  title: 'PULSE Kickstart',
+                  body: 'Today’s prayer step is ready.',
+                  id: 998,
+                  schedule: { repeats: true, on: { hour: h || 9, minute: m || 0 } }
+                });
+              } catch {}
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>;

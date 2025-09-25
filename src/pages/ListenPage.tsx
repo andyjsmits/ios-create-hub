@@ -8,12 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Ear, Users, MessageSquare, Calendar, CheckCircle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { impactMedium, notifySuccess } from "@/lib/haptics";
 import { useHabits } from "@/hooks/useHabits";
+import { useHabitTracking } from "@/hooks/useHabitTracking";
 
 const ListenPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { habitData, loading, saveHabitData } = useHabits('listen');
+  const { toggleHabitCompletion } = useHabitTracking();
   
   const [conversationNotes, setConversationNotes] = useState('');
   
@@ -38,6 +41,8 @@ const ListenPage = () => {
     return entryDate >= weekStart && entryDate <= weekEnd && entry.completed;
   }).length;
 
+  const localDateStr = (d: Date = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
   const handleMarkCompleted = async () => {
     if (!conversationNotes.trim()) {
       toast({
@@ -48,7 +53,7 @@ const ListenPage = () => {
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     const todayEntry = trackingHistory.find(entry => entry.date === today);
     
     if (todayEntry?.completed) {
@@ -70,6 +75,11 @@ const ListenPage = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     await saveHabitData({ trackingHistory: updatedHistory });
+    try { await toggleHabitCompletion('listen'); } catch {}
+    try {
+      const newWeekly = currentWeekCompletions + 1;
+      if (newWeekly >= weeklyGoal) { impactMedium(); notifySuccess(); }
+    } catch {}
     setConversationNotes('');
     
     toast({
@@ -91,16 +101,21 @@ const ListenPage = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="relative overflow-hidden" style={{ background: 'var(--gradient-purple)' }}>
-        <div className="relative container mx-auto px-6 py-16 text-center text-white">
-          <Button 
-            onClick={() => navigate('/')}
-            variant="ghost" 
-            className="absolute top-6 left-6 text-white hover:bg-white/10"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to PULSE
-          </Button>
-          
+        <div
+          className="relative container mx-auto px-6 text-center text-white"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)', paddingBottom: '16px' }}
+        >
+          <div className="flex items-center justify-start">
+            <Button
+              onClick={() => navigate('/')}
+              variant="ghost"
+              className="text-white hover:bg-white/10 px-3 py-2"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back to PULSE
+            </Button>
+          </div>
+
           <div className="mb-8">
             <div className="inline-flex items-center gap-4 mb-6">
               <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
@@ -117,7 +132,7 @@ const ListenPage = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-12 max-w-4xl">
+      <div className="container mx-auto px-6 py-12 max-w-4xl" style={{ paddingBottom: 'calc(3rem + env(safe-area-inset-bottom))' }}>
         {/* About This Habit */}
         <Card className="mb-8">
           <CardHeader>

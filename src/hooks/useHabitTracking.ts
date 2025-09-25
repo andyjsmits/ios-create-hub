@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
+import { impactLight, notifySuccess } from '@/lib/haptics';
 
 export interface HabitCompletion {
   id: string;
@@ -54,7 +55,7 @@ export const useHabitTracking = () => {
   const toggleHabitCompletion = async (habitType: 'pray' | 'union' | 'listen' | 'serve' | 'echo', date?: string) => {
     if (!user) return;
 
-    const completionDate = date || new Date().toISOString().split('T')[0];
+    const completionDate = date || localDateStr();
     
     // Check if already completed today
     const existingCompletion = completions.find(
@@ -88,6 +89,7 @@ export const useHabitTracking = () => {
 
         setCompletions(prev => [data, ...prev]);
       }
+      try { impactLight(); if (!existingCompletion) notifySuccess(); } catch {}
     } catch (error) {
       console.error('Error toggling habit completion:', error);
       toast({
@@ -99,7 +101,7 @@ export const useHabitTracking = () => {
   };
 
   const isHabitCompletedToday = (habitType: 'pray' | 'union' | 'listen' | 'serve' | 'echo'): boolean => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     return completions.some(
       c => c.habit_type === habitType && c.completion_date === today
     );
@@ -137,12 +139,12 @@ export const useHabitTracking = () => {
     const today = new Date();
     const mondayOfWeek = new Date(today);
     mondayOfWeek.setDate(today.getDate() - today.getDay() + 1);
-    const mondayStr = mondayOfWeek.toISOString().split('T')[0];
+    const mondayStr = localDateStr(mondayOfWeek);
     
     // Get Sunday of current week
     const sundayOfWeek = new Date(mondayOfWeek);
     sundayOfWeek.setDate(mondayOfWeek.getDate() + 6);
-    const sundayStr = sundayOfWeek.toISOString().split('T')[0];
+    const sundayStr = localDateStr(sundayOfWeek);
 
     // Get all completions this week
     const thisWeekCompletions = completions.filter(
@@ -169,3 +171,10 @@ export const useHabitTracking = () => {
     loadCompletions
   };
 };
+  // Returns YYYY-MM-DD for the user's local timezone
+  const localDateStr = (d: Date = new Date()) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };

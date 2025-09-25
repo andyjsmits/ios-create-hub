@@ -28,7 +28,13 @@ const Index = () => {
   const { habitData: echoHabitData, loading: echoLoading } = useHabits('echo');
 
   // Add habit tracking
-  const { toggleHabitCompletion, isHabitCompletedToday: isCompletedFromTracking, loading: trackingLoading } = useHabitTracking();
+  const { 
+    toggleHabitCompletion, 
+    isHabitCompletedToday: isCompletedFromTracking, 
+    loading: trackingLoading,
+    calculateStreak: trackingCalculateStreak,
+    calculateWeeklyProgress: trackingCalculateWeeklyProgress
+  } = useHabitTracking();
 
   const [showPrayerManager, setShowPrayerManager] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -92,73 +98,9 @@ const Index = () => {
     return isCompletedFromTracking(habitType);
   };
 
-  // Calculate streak from all habits
-  const calculateStreak = (): number => {
-    const allHabits = [prayHabitData, unionHabitData, listenHabitData, serveHabitData, echoHabitData];
-    const allCompletions: { date: string; completed: boolean }[] = [];
-    
-    // Collect all completions from all habits
-    allHabits.forEach(habitData => {
-      if (habitData?.trackingHistory) {
-        allCompletions.push(...habitData.trackingHistory);
-      }
-    });
+  // Use the centralized tracking calculations so streak reflects global completions (all habits)
 
-    if (allCompletions.length === 0) return 0;
-
-    // Get unique dates where any habit was completed
-    const completionDates = Array.from(new Set(
-      allCompletions.filter(c => c.completed).map(c => c.date)
-    )).sort().reverse();
-
-    let streak = 0;
-    let currentDate = new Date();
-    
-    for (const dateStr of completionDates) {
-      const completionDate = new Date(dateStr);
-      const daysDiff = Math.floor((currentDate.getTime() - completionDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (daysDiff === streak) {
-        streak++;
-        currentDate = new Date(completionDate);
-      } else {
-        break;
-      }
-    }
-
-    return streak;
-  };
-
-  // Calculate weekly progress from all habits
-  const calculateWeeklyProgress = (): { completed: boolean; habitsCounted: Set<string> } => {
-    const today = new Date();
-    const mondayOfWeek = new Date(today);
-    mondayOfWeek.setDate(today.getDate() - today.getDay() + 1);
-    const mondayStr = mondayOfWeek.toISOString().split('T')[0];
-    
-    const sundayOfWeek = new Date(mondayOfWeek);
-    sundayOfWeek.setDate(mondayOfWeek.getDate() + 6);
-    const sundayStr = sundayOfWeek.toISOString().split('T')[0];
-
-    const habitTypes = ['pray', 'union', 'listen', 'serve', 'echo'];
-    const allHabits = [prayHabitData, unionHabitData, listenHabitData, serveHabitData, echoHabitData];
-    const habitsCounted = new Set<string>();
-
-    habitTypes.forEach((habitType, index) => {
-      const habitData = allHabits[index];
-      if (habitData?.trackingHistory) {
-        const hasCompletionThisWeek = habitData.trackingHistory.some((entry: any) => 
-          entry.completed && entry.date >= mondayStr && entry.date <= sundayStr
-        );
-        if (hasCompletionThisWeek) {
-          habitsCounted.add(habitType);
-        }
-      }
-    });
-
-    const completed = habitTypes.every(habit => habitsCounted.has(habit));
-    return { completed, habitsCounted };
-  };
+  // Use centralized weekly progress based on global completions
 
   const pulseHabits = {
     pray: {
@@ -234,8 +176,8 @@ const Index = () => {
   };
 
   // Calculate stats from real data
-  const streak = calculateStreak();
-  const weeklyProgress = calculateWeeklyProgress();
+  const streak = trackingCalculateStreak();
+  const weeklyProgress = trackingCalculateWeeklyProgress();
 
   return (
     <div className="min-h-screen bg-background pb-20" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
@@ -243,16 +185,16 @@ const Index = () => {
       <div className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
         <div className="relative container mx-auto px-6 py-16 text-center text-white">
           {/* Beta Sticker */}
-          <div className="absolute top-4 right-4 pointer-events-none select-none">
+          <div className="absolute top-6 right-4 pointer-events-none select-none" style={{ marginTop: 'env(safe-area-inset-top)' }}>
             {/* Try to load provided sticker from public root; fallback to a small BETA badge */}
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
             <img
               src="/beta-sticker.png"
-              className="h-12 w-auto drop-shadow-lg hidden"
+              className="h-24 w-auto drop-shadow-lg hidden"
               onLoad={(e) => ((e.currentTarget as HTMLImageElement).classList.remove('hidden'))}
               onError={(e) => ((e.currentTarget.parentElement?.querySelector('[data-fallback="beta"]') as HTMLElement)?.classList.remove('hidden'))}
             />
-            <span data-fallback="beta" className="hidden inline-block text-xs font-bold uppercase tracking-wide bg-white/90 text-black px-2 py-1 rounded-md shadow">
+            <span data-fallback="beta" className="hidden inline-block text-sm font-bold uppercase tracking-wide bg-white/90 text-black px-3 py-1.5 rounded-md shadow">
               Beta
             </span>
           </div>
@@ -393,7 +335,8 @@ const Index = () => {
             navigate('/habits/pray');
           }}
           onStartKickstart={async () => {
-            const todayIso = new Date().toISOString().split('T')[0];
+            const localDateStr = (d: Date = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            const todayIso = localDateStr();
             await savePrayData({ kickstart: { startedAt: todayIso, daysCompleted: [] } as any });
             toast({ title: 'Kickstart started', description: 'We’ll prompt a small step each day for 7 days.' });
             try {

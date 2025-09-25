@@ -22,15 +22,21 @@ const TASKS: string[] = [
 ];
 
 export function PrayerKickstartCard({ kickstart, save }: PrayerKickstartCardProps) {
+  const localDateStr = (d: Date = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const progress = kickstart?.daysCompleted?.length ?? 0;
   const prevProgress = useRef(progress);
   const [celebrate, setCelebrate] = useState(false);
   const started = !!kickstart?.startedAt;
-  const todayIso = new Date().toISOString().split('T')[0];
+  const todayIso = localDateStr();
+
+  const parseLocalYMD = (s: string) => {
+    const [y,m,d] = s.split('-').map(Number);
+    return new Date(y, (m||1)-1, d||1);
+  };
 
   const dayIndex = useMemo(() => {
     if (!started || !kickstart?.startedAt) return 0;
-    const start = new Date(kickstart.startedAt);
+    const start = parseLocalYMD(kickstart.startedAt);
     const now = new Date();
     const diff = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     return Math.min(Math.max(diff, 0), TASKS.length - 1);

@@ -72,7 +72,7 @@ export const usePrayerTracking = () => {
   const togglePrayerCompletion = async (personName: string, date?: string, notes?: string) => {
     if (!user) return;
 
-    const completionDate = date || new Date().toISOString().split('T')[0];
+    const completionDate = date || localDateStr();
     
     // Check if already completed for this person on this date
     const existingCompletion = prayerCompletions.find(
@@ -146,7 +146,7 @@ export const usePrayerTracking = () => {
   };
 
   const isPrayedForToday = (personName: string): boolean => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     return prayerCompletions.some(
       c => c.person_name === personName && c.completion_date === today
     );
@@ -157,7 +157,7 @@ export const usePrayerTracking = () => {
   };
 
   const getTodaysPrayerCompletions = (): PrayerCompletion[] => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     return getPrayerCompletionsForDate(today);
   };
 
@@ -171,3 +171,4 @@ export const usePrayerTracking = () => {
     loadPrayerCompletions
   };
 };
+  const localDateStr = (d: Date = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;

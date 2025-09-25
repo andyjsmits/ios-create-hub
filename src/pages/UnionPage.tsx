@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Book, Check, CheckCircle, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { notifySuccess, impactMedium } from "@/lib/haptics";
 import { useHabits } from "@/hooks/useHabits";
 import { useHabitTracking } from "@/hooks/useHabitTracking";
 import { useAuth } from "@/hooks/useAuth";
@@ -62,12 +63,20 @@ const UnionPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { habitData, loading, saveHabitData } = useHabits('union');
-  const { toggleHabitCompletion, isHabitCompletedToday } = useHabitTracking();
+  const { toggleHabitCompletion } = useHabitTracking();
   
   // Get or set weekly goal (default to 2)
   const weeklyGoal = habitData.weeklyGoal || 2;
   const [newGoal, setNewGoal] = useState(weeklyGoal.toString());
   
+  // Helper to get local YYYY-MM-DD
+  const localDateStr = (d: Date = new Date()) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const da = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${da}`;
+  };
+
   // Calculate current reading index (cycles through 36 readings)
   const getCurrentReadingIndex = () => {
     const daysSinceStart = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
@@ -81,11 +90,11 @@ const UnionPage = () => {
     const today = new Date();
     const mondayOfWeek = new Date(today);
     mondayOfWeek.setDate(today.getDate() - today.getDay() + 1);
-    const mondayStr = mondayOfWeek.toISOString().split('T')[0];
+    const mondayStr = localDateStr(mondayOfWeek);
     
     const sundayOfWeek = new Date(mondayOfWeek);
     sundayOfWeek.setDate(mondayOfWeek.getDate() + 6);
-    const sundayStr = sundayOfWeek.toISOString().split('T')[0];
+    const sundayStr = localDateStr(sundayOfWeek);
     
     // Get completion history for this week
     const thisWeekCompletions = (habitData.trackingHistory || []).filter(
@@ -96,17 +105,61 @@ const UnionPage = () => {
   };
   
   const weeklyProgress = calculateWeeklyProgress();
-  const todayCompleted = isHabitCompletedToday('union');
+  const todayCompleted = (habitData.trackingHistory || []).some(e => e.date === localDateStr() && e.completed);
+
+  // --- Custom Goal State & Helpers ---
+  const [customName, setCustomName] = useState(habitData.customGoalName || '');
+  const [customTargetInput, setCustomTargetInput] = useState((habitData.customGoalTarget || 1).toString());
+
+  const customWeeklyProgress = (() => {
+    const today = new Date();
+    const mondayOfWeek = new Date(today);
+    mondayOfWeek.setDate(today.getDate() - today.getDay() + 1);
+    const mondayStr = mondayOfWeek.toISOString().split('T')[0];
+    const sundayOfWeek = new Date(mondayOfWeek);
+    sundayOfWeek.setDate(mondayOfWeek.getDate() + 6);
+    const sundayStr = sundayOfWeek.toISOString().split('T')[0];
+    const hist = habitData.customGoalHistory || [];
+    return hist.filter(e => e.date >= mondayStr && e.date <= sundayStr && e.completed).length;
+  })();
+
+  const handleSaveCustomGoal = () => {
+    const target = parseInt(customTargetInput);
+    if (!customName.trim()) {
+      toast({ title: 'Missing name', description: 'Please provide a name for your custom goal.', variant: 'destructive' });
+      return;
+    }
+    if (isNaN(target) || target < 1 || target > 14) {
+      toast({ title: 'Invalid target', description: 'Please set a weekly target between 1 and 14.', variant: 'destructive' });
+      return;
+    }
+    saveHabitData({ customGoalName: customName.trim(), customGoalTarget: target });
+    toast({ title: 'Custom goal saved', description: `Tracking "${customName.trim()}" ${target}x/week.` });
+  };
+
+  const handleCustomGoalCompleteToday = () => {
+    const today = localDateStr();
+    const current = habitData.customGoalHistory || [];
+    const updated = current.filter(e => e.date !== today);
+    updated.push({ date: today, completed: true, notes: customName ? `${customName} completed` : 'Custom goal' });
+    saveHabitData({ customGoalHistory: updated });
+    toast({ title: 'Great job!', description: `Marked today as complete for ${customName || 'custom goal'}.` });
+  };
   
   const handleCompleteReading = () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     const currentHistory = habitData.trackingHistory || [];
     
     const updatedHistory = currentHistory.filter(entry => entry.date !== today);
     updatedHistory.push({ date: today, completed: true, notes: `Read ${currentReading.passage}` });
     
     saveHabitData({ trackingHistory: updatedHistory });
-    toggleHabitCompletion('union');
+    try {
+      // If this completion meets or exceeds weekly goal, fire success haptic
+      const newWeekly = weeklyProgress + 1;
+      if (newWeekly >= weeklyGoal) { impactMedium(); notifySuccess(); }
+    } catch {}
+    toggleHabitCompletion('union', today);
     
     toast({
       title: "Reading completed!",
@@ -147,16 +200,21 @@ const UnionPage = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="relative overflow-hidden" style={{ background: 'var(--gradient-blue)' }}>
-        <div className="relative container mx-auto px-6 py-16 text-center text-white">
-          <Button 
-            onClick={() => navigate('/')}
-            variant="ghost" 
-            className="absolute top-6 left-6 text-white hover:bg-white/10"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to PULSE
-          </Button>
-          
+        <div
+          className="relative container mx-auto px-6 text-center text-white"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)', paddingBottom: '16px' }}
+        >
+          <div className="flex items-center justify-start">
+            <Button
+              onClick={() => navigate('/')}
+              variant="ghost"
+              className="text-white hover:bg-white/10 px-3 py-2"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back to PULSE
+            </Button>
+          </div>
+
           <div className="mb-8">
             <div className="inline-flex items-center gap-4 mb-6">
               <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
@@ -173,7 +231,7 @@ const UnionPage = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-12 max-w-4xl">
+      <div className="container mx-auto px-6 py-12 max-w-4xl" style={{ paddingBottom: 'calc(3rem + env(safe-area-inset-bottom))' }}>
         {/* Weekly Goal Setting */}
         <Card className="mb-8">
           <CardHeader>
@@ -235,6 +293,73 @@ const UnionPage = () => {
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Custom Goal */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Your Custom Union Goal</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {!habitData.customGoalName ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="custom-name">What would you like to pursue each week?</Label>
+                  <Input
+                    id="custom-name"
+                    placeholder="e.g., Silence & Solitude, Evangelism Conversations, Fasting"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Label htmlFor="custom-target">Weekly target</Label>
+                  <Input
+                    id="custom-target"
+                    type="number"
+                    min="1"
+                    max="14"
+                    className="w-20 text-center"
+                    value={customTargetInput}
+                    onChange={(e) => setCustomTargetInput(e.target.value)}
+                  />
+                  <span className="text-muted-foreground">times/week</span>
+                </div>
+                <Button onClick={handleSaveCustomGoal}>Save Custom Goal</Button>
+                <p className="text-xs text-muted-foreground">You can change this anytime.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold">{habitData.customGoalName}</p>
+                    <p className="text-sm text-muted-foreground">Target: {habitData.customGoalTarget} times/week</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold">{customWeeklyProgress} / {habitData.customGoalTarget || 0}</span>
+                  </div>
+                </div>
+                <div className="w-full bg-muted rounded-full h-3">
+                  <div
+                    className="bg-primary rounded-full h-3 transition-all duration-300"
+                    style={{ width: `${Math.min(((customWeeklyProgress / (habitData.customGoalTarget || 1)) * 100) || 0, 100)}%` }}
+                  ></div>
+                </div>
+                <div className="flex gap-3">
+                  <Button onClick={handleCustomGoalCompleteToday} variant="default">
+                    <Check className="h-4 w-4 mr-2" /> Mark Today Complete
+                  </Button>
+                  <Button variant="outline" onClick={() => {
+                    setCustomName(habitData.customGoalName || '');
+                    setCustomTargetInput(String(habitData.customGoalTarget || 1));
+                    // allow editing by clearing the saved name temporarily
+                    saveHabitData({ customGoalName: undefined });
+                  }}>Edit Goal</Button>
+                  <Button variant="ghost" onClick={() => saveHabitData({ customGoalName: undefined, customGoalTarget: undefined, customGoalHistory: [] })}>Clear</Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

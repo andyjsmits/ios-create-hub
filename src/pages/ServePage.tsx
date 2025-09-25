@@ -8,17 +8,21 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, HandHeart, Heart, Users, Calendar, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { impactMedium, notifySuccess } from "@/lib/haptics";
 import { useHabits } from "@/hooks/useHabits";
+import { useHabitTracking } from "@/hooks/useHabitTracking";
 
 const ServePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { habitData, loading, saveHabitData } = useHabits('serve');
+  const { toggleHabitCompletion } = useHabitTracking();
   
   const [serviceNotes, setServiceNotes] = useState('');
   
   const weeklyGoal = habitData.weeklyGoal || 3;
   const trackingHistory = habitData.trackingHistory || [];
+  const customHistory = habitData.customGoalHistory || [];
   
   // Get current week's completions
   const getCurrentWeekStart = () => {
@@ -38,6 +42,9 @@ const ServePage = () => {
     return entryDate >= weekStart && entryDate <= weekEnd && entry.completed;
   }).length;
 
+
+  const localDateStr = (d: Date = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
   const handleMarkCompleted = async () => {
     if (!serviceNotes.trim()) {
       toast({
@@ -48,7 +55,7 @@ const ServePage = () => {
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     const todayEntry = trackingHistory.find(entry => entry.date === today);
     
     if (todayEntry?.completed) {
@@ -70,6 +77,12 @@ const ServePage = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     await saveHabitData({ trackingHistory: updatedHistory });
+    try { await toggleHabitCompletion('serve'); } catch {}
+    try {
+      // weekly goal success haptic if reached/exceeded
+      const newWeekly = currentWeekCompletions + 1;
+      if (newWeekly >= weeklyGoal) { impactMedium(); notifySuccess(); }
+    } catch {}
     setServiceNotes('');
     
     toast({
@@ -83,6 +96,8 @@ const ServePage = () => {
     await saveHabitData({ weeklyGoal: newGoal });
   };
 
+  // No custom goal in Serve; keep only weekly goal & record acts of service
+
   if (loading) {
     return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>;
   }
@@ -91,16 +106,21 @@ const ServePage = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="relative overflow-hidden" style={{ background: 'var(--gradient-teal)' }}>
-        <div className="relative container mx-auto px-6 py-16 text-center text-white">
-          <Button 
-            onClick={() => navigate('/')}
-            variant="ghost" 
-            className="absolute top-6 left-6 text-white hover:bg-white/10"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to PULSE
-          </Button>
-          
+        <div
+          className="relative container mx-auto px-6 text-center text-white"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)', paddingBottom: '16px' }}
+        >
+          <div className="flex items-center justify-start">
+            <Button
+              onClick={() => navigate('/')}
+              variant="ghost"
+              className="text-white hover:bg-white/10 px-3 py-2"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back to PULSE
+            </Button>
+          </div>
+
           <div className="mb-8">
             <div className="inline-flex items-center gap-4 mb-6">
               <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
@@ -117,7 +137,7 @@ const ServePage = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-12 max-w-4xl">
+      <div className="container mx-auto px-6 py-12 max-w-4xl" style={{ paddingBottom: 'calc(3rem + env(safe-area-inset-bottom))' }}>
         {/* About This Habit */}
         <Card className="mb-8">
           <CardHeader>
@@ -136,6 +156,8 @@ const ServePage = () => {
             </p>
           </CardContent>
         </Card>
+
+        {/* (Custom Serve Goal removed by request) */}
 
         {/* Weekly Goal */}
         <Card className="mb-8">
@@ -198,12 +220,12 @@ const ServePage = () => {
         {/* Today's Service */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Record Today's Service</CardTitle>
+            <CardTitle>Record an Act of Service</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="service-notes">
-                How did you serve someone today?
+                How did you serve someone?
               </Label>
               <Textarea
                 id="service-notes"
@@ -216,7 +238,7 @@ const ServePage = () => {
             </div>
             <Button onClick={handleMarkCompleted} className="w-full" size="lg">
               <CheckCircle className="h-4 w-4 mr-2" />
-              Record Service
+              Record Act of Service
             </Button>
           </CardContent>
         </Card>
@@ -233,7 +255,10 @@ const ServePage = () => {
               </p>
             ) : (
               <div className="space-y-3">
-                {trackingHistory.slice(0, 10).map((entry, index) => (
+                {trackingHistory
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .slice(0, 10)
+                  .map((entry, index) => (
                   <div key={index} className="flex items-start justify-between p-4 border rounded-lg">
                     <div className="flex items-start gap-4 flex-1">
                       <div className={`w-3 h-3 rounded-full mt-2 ${entry.completed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
