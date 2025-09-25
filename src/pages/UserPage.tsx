@@ -567,8 +567,13 @@ const UserPage = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            minLength={6}
+                            minLength={8}
+                            pattern="(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}"
+                            title="At least 8 characters, including letters and numbers"
                           />
+                          <p className="text-xs text-muted-foreground">
+                            Must be at least 8 characters and include letters and numbers.
+                          </p>
                         </div>
                         <Button type="submit" className="w-full" disabled={loading}>
                           {loading ? "Creating account..." : "Sign Up"}
@@ -627,7 +632,7 @@ const UserPage = () => {
       <div className="container mx-auto px-6 py-8">
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Beta Notice */}
-          <Card className="border-amber-300/50">
+          <Card className="border-amber-300/50 mt-2" style={{ marginTop: 'env(safe-area-inset-top)' }}>
             <CardHeader>
               <CardTitle className="text-amber-700">This app is in Beta</CardTitle>
             </CardHeader>
