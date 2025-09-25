@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { MessageCircle, Mail } from "lucide-react";
+import { showDebugOverlay } from "@/lib/debugOverlay";
 import p2cLogo from "@/assets/p2c-students-logos.png";
 
 const Auth = () => {
@@ -49,7 +50,8 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      // Send verification back to our auth page for consistent handling
+      const redirectUrl = `${window.location.origin}/auth`;
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -75,6 +77,38 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  // Handle email verification links that include access_token in URL hash (web)
+  useEffect(() => {
+    const processHashSession = async () => {
+      if (typeof window === 'undefined') return;
+      if (window.location.protocol === 'capacitor:') return; // native handled elsewhere
+
+      const hash = window.location.hash || '';
+      if (!hash.includes('access_token')) return;
+
+      const fragment = new URLSearchParams(hash.replace(/^#/, ''));
+      const accessToken = fragment.get('access_token');
+      const refreshToken = fragment.get('refresh_token') || '';
+      const type = fragment.get('type');
+      if (!accessToken) return;
+
+      const { data, error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
+      if (error) {
+        console.error('Email verification session error:', error);
+        toast({ title: 'Verification Error', description: 'We could not verify your email. Please try signing in.', variant: 'destructive' });
+        return;
+      }
+      // Clean up the hash from URL
+      try { window.history.replaceState({}, document.title, window.location.pathname); } catch {}
+      // Route to a friendly verified splash screen
+      navigate('/verified', { replace: true });
+    };
+    processHashSession();
+  }, [navigate, toast]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,34 +138,41 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     try {
-      // Check if we're on a native platform and use in-app browser
-      const isNative = window.location.protocol === 'capacitor:';
-      const isAndroidEmulator = navigator.userAgent.includes('Android') && 
-                               (window.location.hostname === 'localhost' || 
-                                window.location.hostname === '10.0.2.2');
+      const isNative = window.location.protocol === 'capacitor:' || !!(window as any).Capacitor;
+      const isAndroid = navigator.userAgent.includes('Android');
+      const redirectTo = isNative ? 'app.smits.pulse://auth/callback' : `${window.location.origin}/auth`;
       
-      // For Android emulator, use fixed localhost redirect configured in Supabase
-      let redirectTo;
-      if (isAndroidEmulator) {
-        // Try to determine the correct localhost port, defaulting to common development ports
-        const currentPort = window.location.port;
-        const port = currentPort && currentPort !== '80' && currentPort !== '443' ? currentPort : '3000';
-        redirectTo = `http://localhost:${port}/auth`;
-      } else if (isNative) {
-        redirectTo = 'app.smits.pulse://auth/callback';
-      } else {
-        // For web, use current origin
-        redirectTo = `${window.location.origin}/auth`;
-      }
-      
+      // Log OAuth config for debugging
+      console.error('=== OAuth Config ===', JSON.stringify({
+        isNative,
+        isAndroid,
+        redirectTo,
+        protocol: window.location.protocol,
+        hostname: window.location.hostname,
+        userAgent: navigator.userAgent.substring(0, 100),
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+        hasCapacitor: !!(window as any).Capacitor,
+        capacitorPlatform: (window as any).Capacitor?.getPlatform?.(),
+        capacitorNative: (window as any).Capacitor?.isNativePlatform?.()
+      }, null, 2));
+
       console.log('Starting Google OAuth:', {
         isNative,
-        isAndroidEmulator,
+        isAndroid,
         redirectTo,
         userAgent: navigator.userAgent,
-        hostname: window.location.hostname
+        hostname: window.location.hostname,
+        protocol: window.location.protocol,
+        port: window.location.port,
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL
       });
       
+      console.log('Calling signInWithOAuth with:', {
+        provider: 'google',
+        redirectTo,
+        skipBrowserRedirect: isNative
+      });
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -144,37 +185,36 @@ const Auth = () => {
         }
       });
 
+      console.log('OAuth response received:', {
+        hasData: !!data,
+        hasUrl: !!data?.url,
+        url: data?.url,
+        hasError: !!error,
+        error: error?.message
+      });
+
       if (error) throw error;
 
       console.log('OAuth response:', { hasUrl: !!data.url, url: data.url });
 
       // If we have a URL, open it appropriately
       if (data.url) {
-        if (isAndroidEmulator || !isNative) {
-          // For Android emulator and web, redirect in the same window
-          console.log('Redirecting in same window for emulator/web');
-          window.location.href = data.url;
-        } else if (isNative) {
+        showDebugOverlay('Opening OAuth URL', { native: isNative, urlHost: (() => { try { return new URL(data.url!).host } catch { return 'unknown' }})() }, { sticky: true });
+        if (isNative) {
           try {
             console.log('Attempting to open in-app browser...');
-            
-            const capacitorWindow = window as any;
-            if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
-              console.log('Using Capacitor Browser plugin for in-app authentication');
-              const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
-                url: data.url,
-                windowName: '_self',
-                toolbarColor: '#ffffff'
-              });
-              console.log('In-app browser opened successfully:', browserResult);
+            const cap = (window as any).Capacitor;
+            if (cap?.Plugins?.Browser?.open) {
+              await cap.Plugins.Browser.open({ url: data.url, windowName: '_self', toolbarColor: '#ffffff' });
             } else {
               throw new Error('Browser plugin not available');
             }
           } catch (browserError) {
             console.error('In-app browser failed:', browserError);
-            console.log('Falling back to external browser redirect');
             window.location.href = data.url;
           }
+        } else {
+          window.location.href = data.url;
         }
       }
     } catch (error: any) {
@@ -216,20 +256,9 @@ const Auth = () => {
       }
       
       // Fallback to web OAuth for non-iOS or when native fails
-      const isAndroidEmulator = navigator.userAgent.includes('Android') && 
-                               (window.location.hostname === 'localhost' || 
-                                window.location.hostname === '10.0.2.2');
-      
-      let redirectTo;
-      if (isAndroidEmulator) {
-        const currentPort = window.location.port;
-        const port = currentPort && currentPort !== '80' && currentPort !== '443' ? currentPort : '3000';
-        redirectTo = `http://localhost:${port}/auth`;
-      } else if (isNative) {
-        redirectTo = 'app.smits.pulse://auth/callback';
-      } else {
-        redirectTo = `${window.location.origin}/auth`;
-      }
+      const isAndroid = navigator.userAgent.includes('Android');
+
+      const redirectTo = isNative ? 'app.smits.pulse://auth/callback' : `${window.location.origin}/auth`;
       
       console.log('Using web OAuth fallback with redirectTo:', redirectTo);
       
@@ -251,31 +280,20 @@ const Auth = () => {
 
       // If we have a URL, open it appropriately
       if (data.url) {
-        if (isAndroidEmulator || !isNative) {
-          // For Android emulator and web, redirect in the same window
-          console.log('Redirecting in same window for emulator/web');
-          window.location.href = data.url;
-        } else if (isNative) {
+        if (isNative) {
           try {
-            console.log('Attempting to open in-app browser...');
-            
-            const capacitorWindow = window as any;
-            if (capacitorWindow.Capacitor && capacitorWindow.Capacitor.Plugins && capacitorWindow.Capacitor.Plugins.Browser) {
-              console.log('Using Capacitor Browser plugin for in-app authentication');
-              const browserResult = await capacitorWindow.Capacitor.Plugins.Browser.open({
-                url: data.url,
-                windowName: '_self',
-                toolbarColor: '#ffffff'
-              });
-              console.log('In-app browser opened successfully:', browserResult);
+            const cap = (window as any).Capacitor;
+            if (cap?.Plugins?.Browser?.open) {
+              await cap.Plugins.Browser.open({ url: data.url, windowName: '_self', toolbarColor: '#ffffff' });
             } else {
               throw new Error('Browser plugin not available');
             }
           } catch (browserError) {
             console.error('In-app browser failed:', browserError);
-            console.log('Falling back to external browser redirect');
             window.location.href = data.url;
           }
+        } else {
+          window.location.href = data.url;
         }
       }
     } catch (error: any) {
@@ -501,8 +519,13 @@ const Auth = () => {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        minLength={6}
+                        minLength={8}
+                        pattern="(?=.*[A-Za-z])(?=.*\\d).{8,}"
+                        title="For security, passwords must contain a combination of letters and numbers, with a minimum of 8 characters."
                       />
+                      <p className="text-xs text-muted-foreground">
+                        For security, passwords must contain a combination of letters and numbers, with a minimum of 8 characters.
+                      </p>
                     </div>
                     <Button type="submit" className="w-full" disabled={loading}>
                       {loading ? "Creating account..." : "Sign Up"}

@@ -568,11 +568,11 @@ const UserPage = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             required
                             minLength={8}
-                            pattern="(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}"
-                            title="At least 8 characters, including letters and numbers"
+                            pattern="(?=.*[A-Za-z])(?=.*\\d).{8,}"
+                            title="For security, passwords must contain a combination of letters and numbers, with a minimum of 8 characters."
                           />
                           <p className="text-xs text-muted-foreground">
-                            Must be at least 8 characters and include letters and numbers.
+                            For security, passwords must contain a combination of letters and numbers, with a minimum of 8 characters.
                           </p>
                         </div>
                         <Button type="submit" className="w-full" disabled={loading}>
