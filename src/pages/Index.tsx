@@ -8,7 +8,7 @@ import { useHabits, PrayerPerson } from "@/hooks/useHabits";
 import { PrayerKickstartCard } from "@/components/PrayerKickstartCard";
 import { useHabitTracking } from "@/hooks/useHabitTracking";
 import { MessageCircle, Book, Ear, HandHeart, MessageSquareQuote, Settings, Flame, Trophy, BookOpen } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import p2cLogo from "@/assets/p2c-students-logos.png";
 import { supabase } from "@/integrations/supabase/client";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
