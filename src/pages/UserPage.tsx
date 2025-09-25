@@ -14,7 +14,6 @@ import { useNavigate } from "react-router-dom";
 import { notificationService } from "@/services/notificationService";
 import { selection, notifySuccess } from "@/lib/haptics";
 import { CAMPUSES } from "@/lib/campuses";
-import { App as CapacitorApp } from "@capacitor/app";
 
 const UserPage = () => {
   const { user, signOut } = useAuth();
@@ -49,8 +48,9 @@ const UserPage = () => {
   useEffect(() => {
     (async () => {
       try {
-        const info = await CapacitorApp.getInfo();
-        setAppVersion(info.version || null);
+        const cap: any = (window as any).Capacitor;
+        const info = await cap?.Plugins?.App?.getInfo?.();
+        setAppVersion(info?.version || null);
       } catch {
         setAppVersion(null);
       }
