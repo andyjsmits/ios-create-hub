@@ -54,9 +54,28 @@ export const HabitCard = ({
     }
   };
   
+  const handleCardActivate = () => {
+    if (onNavigate) onNavigate();
+  };
+
+  const handleKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
+    if (!onNavigate) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onNavigate();
+    }
+  };
+
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 overflow-hidden relative border border-border shadow-md bg-card"
-          style={{ touchAction: 'manipulation' }}>
+    <Card
+      className={`group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 overflow-hidden relative border border-border shadow-md bg-card ${onNavigate ? 'cursor-pointer' : ''}`}
+      style={{ touchAction: 'manipulation' }}
+      onClick={handleCardActivate}
+      role={onNavigate ? 'button' : undefined}
+      tabIndex={onNavigate ? 0 : undefined}
+      onKeyDown={handleKeyDown}
+      aria-label={onNavigate ? `${title}: open` : undefined}
+    >
       <CardHeader className="relative pb-4">
         <div className="flex items-start gap-4">
           <div className="p-4 rounded-xl shadow-sm" style={{ background: gradient }}>
@@ -80,6 +99,7 @@ export const HabitCard = ({
           <Button 
             onClick={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               onNavigate();
             }}
             className="w-full mt-4" 
@@ -89,6 +109,15 @@ export const HabitCard = ({
             {getActionText()}
           </Button>
         )}
+        <div className="pt-2 text-xs text-muted-foreground">
+          <a
+            href="/articles/missional-habits"
+            onClick={(e) => e.stopPropagation()}
+            className="underline hover:text-foreground"
+          >
+            New to Missional Habits? Start here!
+          </a>
+        </div>
       </CardContent>
     </Card>
   );

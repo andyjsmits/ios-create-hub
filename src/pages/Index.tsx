@@ -248,6 +248,11 @@ const Index = () => {
             kickstart={prayHabitData.kickstart}
             save={(data) => savePrayData({ ...(prayHabitData || {}), ...data })}
           />
+          <div className="mt-3 text-center">
+            <a href="/articles/missional-habits" className="text-sm font-medium underline text-primary hover:opacity-80">
+              New to Missional Habits? Start here!
+            </a>
+          </div>
         </div>
 
         {/* PULSE Habit Cards */}

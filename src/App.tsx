@@ -13,9 +13,11 @@ import PrayPage from "./pages/PrayPage";
 import UnionPage from "./pages/UnionPage";
 import ListenPage from "./pages/ListenPage";
 import ServePage from "./pages/ServePage";
+import Verified from "./pages/Verified";
 import EchoPage from "./pages/EchoPage";
 import SupportPage from "./pages/SupportPage";
 import NotFound from "./pages/NotFound";
+import MissionalHabits from "./pages/MissionalHabits";
 
 const queryClient = new QueryClient();
 
@@ -37,7 +39,9 @@ const App = () => (
               <Route path="/habits/listen" element={<ListenPage />} />
               <Route path="/habits/serve" element={<ServePage />} />
               <Route path="/habits/echo" element={<EchoPage />} />
+              <Route path="/verified" element={<Verified />} />
               <Route path="/support" element={<SupportPage />} />
+              <Route path="/articles/missional-habits" element={<MissionalHabits />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
