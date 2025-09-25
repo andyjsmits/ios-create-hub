@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,7 +34,8 @@ export const PrayerTracker = ({
     getTodaysPrayerCompletions,
     prayerCompletions
   } = usePrayerTracking();
-  const todaysCompletions = getTodaysPrayerCompletions();
+  const todaysCompletions = useMemo(() => getTodaysPrayerCompletions(), [prayerCompletions]);
+  const anyCompletedToday = todaysCompletions.length > 0;
 
   // Get today's prayer list based on selected days of week
   const getTodaysPrayerList = () => {
@@ -54,7 +55,7 @@ export const PrayerTracker = ({
       return false;
     });
   };
-  const todaysPrayerList = getTodaysPrayerList();
+  const todaysPrayerList = useMemo(() => getTodaysPrayerList(), [prayerList, prayerCompletions]);
   const allTodaysPrayersComplete = todaysPrayerList.length > 0 && todaysPrayerList.every(person => isPrayedForToday(person.name));
 
   // Auto-sync overall habit completion with individual prayer completions
@@ -62,29 +63,25 @@ export const PrayerTracker = ({
     console.log('Prayer tracker effect running:', {
       todaysPrayerListLength: todaysPrayerList.length,
       allTodaysPrayersComplete,
+      anyCompletedToday,
       isHabitCompletedToday,
       prayerCompletionsCount: prayerCompletions.length
     });
 
-    if (todaysPrayerList.length === 0) {
-      console.log('No prayers scheduled for today, skipping auto-sync');
+    // Treat ANY prayer completion today as fulfilling the daily habit.
+    if (anyCompletedToday && !isHabitCompletedToday) {
+      console.log('At least one prayer completed today; marking habit complete');
+      toggleHabitRef.current();
       return;
     }
-
-    // If all prayers are complete but overall habit isn't marked complete
-    if (allTodaysPrayersComplete && !isHabitCompletedToday) {
-      console.log('All prayers complete but habit not marked complete - triggering completion');
+    if (!anyCompletedToday && isHabitCompletedToday) {
+      console.log('No prayers completed today; unmarking habit completion');
       toggleHabitRef.current();
-    }
-    // If not all prayers are complete but overall habit is marked complete
-    else if (!allTodaysPrayersComplete && isHabitCompletedToday) {
-      console.log('Not all prayers complete but habit marked complete - removing completion');
-      toggleHabitRef.current();
+      return;
     }
   }, [
-    allTodaysPrayersComplete, 
+    anyCompletedToday,
     isHabitCompletedToday, 
-    todaysPrayerList.length,
     prayerCompletions.length, // Add this to trigger on prayer completion changes
     // Remove onToggleHabitCompletion from dependencies to avoid instability
   ]);
