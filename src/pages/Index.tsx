@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHabits, PrayerPerson } from "@/hooks/useHabits";
 import { PrayerKickstartCard } from "@/components/PrayerKickstartCard";
 import { useHabitTracking } from "@/hooks/useHabitTracking";
-import { MessageCircle, Book, Ear, HandHeart, MessageSquareQuote, Settings, Flame, Trophy } from "lucide-react";
+import { MessageCircle, Book, Ear, HandHeart, MessageSquareQuote, Settings, Flame, Trophy, BookOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import p2cLogo from "@/assets/p2c-students-logos.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -248,9 +248,28 @@ const Index = () => {
             kickstart={prayHabitData.kickstart}
             save={(data) => savePrayData({ ...(prayHabitData || {}), ...data })}
           />
-          <div className="mt-3 text-center">
-            <a href="/articles/missional-habits" className="text-sm font-medium underline text-primary hover:opacity-80">
-              New to Missional Habits? Start here!
+          <div className="mt-4">
+            <a href="/articles/missional-habits" className="block">
+              <Card className="group cursor-pointer hover:shadow-lg transition-all duration-200">
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm"
+                      style={{ background: 'var(--gradient-purple)' }}
+                    >
+                      <BookOpen className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-base font-semibold text-foreground">
+                        New to Missional Habits? Start here!
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Learn the vision and walk through the five habits
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </a>
           </div>
         </div>
