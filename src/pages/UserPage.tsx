@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { notificationService } from "@/services/notificationService";
 import { selection, notifySuccess } from "@/lib/haptics";
 import { CAMPUSES } from "@/lib/campuses";
+import { App as CapacitorApp } from "@capacitor/app";
 
 const UserPage = () => {
   const { user, signOut } = useAuth();
@@ -34,6 +35,7 @@ const UserPage = () => {
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
 
   // Load user preferences when component mounts
   useEffect(() => {
@@ -42,6 +44,18 @@ const UserPage = () => {
       loadUserProfile();
     }
   }, [user]);
+
+  // Load native app version for display (CFBundleShortVersionString on iOS)
+  useEffect(() => {
+    (async () => {
+      try {
+        const info = await CapacitorApp.getInfo();
+        setAppVersion(info.version || null);
+      } catch {
+        setAppVersion(null);
+      }
+    })();
+  }, []);
 
   const loadUserProfile = async () => {
     try {
@@ -835,7 +849,7 @@ const UserPage = () => {
         
         {/* Version indicator */}
         <div className="text-center mt-8 pb-4">
-          <p className="text-xs text-muted-foreground/60">v1.17.0</p>
+          <p className="text-xs text-muted-foreground/60">{appVersion ? `v${appVersion}` : ''}</p>
         </div>
       </div>
     </div>
