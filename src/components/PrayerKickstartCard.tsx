@@ -16,7 +16,7 @@ const TASKS: string[] = [
   'Pray for someone new you met or noticed today.',
   'Pray for renewal on your campus or in your community.',
   'Pray for a friend’s specific need and message them encouragement.',
-  'Pray with someone (in person or by call/text) for two minutes.',
+  'Pray with someone (in person or by call/text).',
   'Pray for an opportunity to serve or bless someone today.',
   'Pray for boldness to share a small testimony this week.',
 ];
