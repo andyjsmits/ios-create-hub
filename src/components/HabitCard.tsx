@@ -109,15 +109,7 @@ export const HabitCard = ({
             {getActionText()}
           </Button>
         )}
-        <div className="pt-2 text-xs text-muted-foreground">
-          <a
-            href="/articles/missional-habits"
-            onClick={(e) => e.stopPropagation()}
-            className="underline hover:text-foreground"
-          >
-            New to Missional Habits? Start here!
-          </a>
-        </div>
+        
       </CardContent>
     </Card>
   );
