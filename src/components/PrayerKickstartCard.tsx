@@ -28,6 +28,9 @@ export function PrayerKickstartCard({ kickstart, save }: PrayerKickstartCardProp
   const [celebrate, setCelebrate] = useState(false);
   const started = !!kickstart?.startedAt;
   const todayIso = localDateStr();
+  const todayAlreadyCompleted = !!kickstart?.daysCompleted?.includes(todayIso);
+  const [justCompletedToday, setJustCompletedToday] = useState(false);
+  const completedToday = todayAlreadyCompleted || justCompletedToday;
 
   const parseLocalYMD = (s: string) => {
     const [y,m,d] = s.split('-').map(Number);
@@ -61,8 +64,15 @@ export function PrayerKickstartCard({ kickstart, save }: PrayerKickstartCardProp
   const markTodayComplete = () => {
     if (!started) return;
     const set = new Set(kickstart?.daysCompleted ?? []);
-    if (!set.has(todayIso)) set.add(todayIso);
+    if (set.has(todayIso)) {
+      // No-op: already recorded today; keep UI responsive by still saving current state
+      save({ kickstart: { startedAt: kickstart!.startedAt, daysCompleted: Array.from(set) } });
+      return;
+    }
+    set.add(todayIso);
     save({ kickstart: { startedAt: kickstart!.startedAt, daysCompleted: Array.from(set) } });
+    // Optimistically reflect completion in UI until parent prop updates
+    setJustCompletedToday(true);
   };
 
   useEffect(() => {
@@ -116,8 +126,8 @@ export function PrayerKickstartCard({ kickstart, save }: PrayerKickstartCardProp
               <p className="text-sm font-medium mb-2">Today’s step</p>
               <p className="text-sm text-muted-foreground">{TASKS[dayIndex]}</p>
             </div>
-            <Button onClick={markTodayComplete} className="w-full">
-              Mark Today Complete
+            <Button onClick={markTodayComplete} className="w-full" variant={completedToday ? 'secondary' : 'default'} disabled={completedToday}>
+              {completedToday ? 'Today completed' : 'Mark Today Complete'}
             </Button>
           </>
         )}
