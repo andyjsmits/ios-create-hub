@@ -135,20 +135,19 @@ export const useHabitTracking = () => {
   };
 
   const calculateWeeklyProgress = (): { completed: boolean; habitsCounted: Set<string> } => {
-    // Get Monday of current week
+    // Use Sunday -> Saturday as the weekly window
     const today = new Date();
-    const mondayOfWeek = new Date(today);
-    mondayOfWeek.setDate(today.getDate() - today.getDay() + 1);
-    const mondayStr = localDateStr(mondayOfWeek);
-    
-    // Get Sunday of current week
-    const sundayOfWeek = new Date(mondayOfWeek);
-    sundayOfWeek.setDate(mondayOfWeek.getDate() + 6);
-    const sundayStr = localDateStr(sundayOfWeek);
+    const sundayStart = new Date(today);
+    // getDay(): 0 = Sunday
+    sundayStart.setDate(today.getDate() - today.getDay());
+    const sundayStr = localDateStr(sundayStart);
+    const saturdayEnd = new Date(sundayStart);
+    saturdayEnd.setDate(sundayStart.getDate() + 6);
+    const saturdayStr = localDateStr(saturdayEnd);
 
     // Get all completions this week
     const thisWeekCompletions = completions.filter(
-      c => c.completion_date >= mondayStr && c.completion_date <= sundayStr
+      c => c.completion_date >= sundayStr && c.completion_date <= saturdayStr
     );
 
     // Get unique habit types completed this week
