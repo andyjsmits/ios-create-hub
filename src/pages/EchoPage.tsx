@@ -97,6 +97,11 @@ const EchoPage = () => {
     return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>;
   }
 
+  const parseLocalYMD = (s: string) => {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}

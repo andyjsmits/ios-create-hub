@@ -18,6 +18,7 @@ export const usePrayerTracking = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
+  const localDateStr = (d: Date = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
   useEffect(() => {
     if (user) {
@@ -57,6 +58,30 @@ export const usePrayerTracking = () => {
 
       console.log('Successfully loaded prayer completions:', data);
       setPrayerCompletions(data || []);
+
+      // One-time backfill: if this is the owner account, ensure overall habit 'pray' completions
+      try {
+        if ((user as any).email === 'andyjsmits@gmail.com' && typeof window !== 'undefined') {
+          const backfillKey = 'backfilled_pray_habit';
+          if (!localStorage.getItem(backfillKey)) {
+            const { data: habitRows } = await supabase
+              .from('habit_completions')
+              .select('completion_date')
+              .eq('user_id', user.id)
+              .eq('habit_type', 'pray');
+            const haveDates = new Set((habitRows || []).map(r => r.completion_date));
+            const needDates = Array.from(new Set((data || []).map(c => c.completion_date)))
+              .filter(d => !haveDates.has(d));
+            if (needDates.length > 0) {
+              const rows = needDates.map(d => ({ user_id: user.id, habit_type: 'pray', completion_date: d }));
+              await supabase.from('habit_completions').insert(rows);
+            }
+            try { localStorage.setItem(backfillKey, 'true'); } catch {}
+          }
+        }
+      } catch (e) {
+        console.warn('Backfill skipped/failed:', e);
+      }
     } catch (error) {
       console.error('Error loading prayer completions:', error);
       toast({

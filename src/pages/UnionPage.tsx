@@ -449,7 +449,7 @@ const UnionPage = () => {
                         <div className={`w-3 h-3 rounded-full ${entry.completed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                         <div>
                           <p className="font-medium">
-                            {new Date(entry.date).toLocaleDateString('en-US', { 
+                            {(() => { const [y,m,d]=entry.date.split('-').map(Number); return new Date(y,(m||1)-1,d||1); })().toLocaleDateString('en-US', { 
                               weekday: 'long', 
                               month: 'long', 
                               day: 'numeric' 

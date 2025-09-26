@@ -93,6 +93,10 @@ const PrayPage = () => {
     } catch {}
   }, []);
   const prayerHistory = getPrayerHistory();
+  const parseLocalYMD = (s: string) => {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  };
   const addResource = () => {
     if (!user) {
       toast({
@@ -244,7 +248,7 @@ By prioritizing praying for others, we align our hearts with God's heart for peo
                       <div className="w-3 h-3 rounded-full bg-green-500"></div>
                       <div>
                         <p className="font-medium">
-                          {new Date(entry.date).toLocaleDateString('en-US', {
+                          {parseLocalYMD(entry.date).toLocaleDateString('en-US', {
                       weekday: 'long',
                       month: 'long',
                       day: 'numeric'
