@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, Bell, BellOff, Clock, Check, X, Settings } from "lucide-react";
+import { Plus, Trash2, Bell, BellOff, Clock, Check, X, Settings, Calendar } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { PrayerPerson } from "@/hooks/useHabits";
 import { usePrayerNotifications } from "@/hooks/usePrayerNotifications";
@@ -16,6 +17,7 @@ interface PrayerManagerProps {
   prayerList: PrayerPerson[];
   onUpdatePrayerList: (list: PrayerPerson[]) => void;
   onClose: () => void;
+  onStartKickstart?: () => void;
 }
 
 const daysOfWeek = [
@@ -28,7 +30,7 @@ const daysOfWeek = [
   { short: 'S', full: 'Saturday', value: 6 },
 ];
 
-export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: PrayerManagerProps) => {
+export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose, onStartKickstart }: PrayerManagerProps) => {
   const [newPersonName, setNewPersonName] = useState('');
   const [newPersonTime, setNewPersonTime] = useState('09:00');
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
@@ -39,6 +41,85 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
   const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
   const { toast } = useToast();
   const { scheduleNotification, cancelNotification, cancelAllNotificationsForPerson, notifications } = usePrayerNotifications();
+  const [highlightIds, setHighlightIds] = useState<string[]>([]);
+  const scrollRef = useState<HTMLElement | null>(null)[0] as any;
+  const setScrollRef = (el: any) => {
+    (PrayerManager as any)._scrollEl = el;
+  };
+  
+  // Quick-add flow: Add 3/5/7 people with immediate naming and auto-assign days
+  const [starterEditor, setStarterEditor] = useState<{ count: number } | null>(null);
+  const [starterInputs, setStarterInputs] = useState<string[]>([]);
+
+  const openStarterEditor = (count: number) => {
+    setStarterEditor({ count });
+    setStarterInputs(Array.from({ length: count }, () => ''));
+  };
+
+  const confirmStarterEditor = async () => {
+    if (!starterEditor) return;
+    const existingNames = new Set(prayerList.map(p => p.name.toLowerCase()));
+    const names = starterInputs.map(n => n.trim()).filter(Boolean);
+    if (names.length === 0) {
+      toast({ title: 'No names entered', description: 'You can add names later using the form below.' });
+      setStarterEditor(null);
+      return;
+    }
+    const today = new Date().getDay(); // 0 (Sun) .. 6 (Sat)
+    const newPeople: PrayerPerson[] = names
+      .filter(n => !existingNames.has(n.toLowerCase()))
+      .map((name, idx) => ({
+        id: `${Date.now()}-quick-${idx}`,
+        name,
+        daysOfWeek: [((today + idx) % 7)], // auto-assign one per day, starting today
+        notificationTime: '09:00'
+      }));
+    if (newPeople.length === 0) {
+      toast({ title: 'No changes', description: 'These names are already on your list.' });
+      setStarterEditor(null);
+      return;
+    }
+    onUpdatePrayerList([...prayerList, ...newPeople]);
+    // Attempt to schedule notifications for assigned days if permission is granted
+    if (hasNotificationPermission) {
+      try {
+        for (const p of newPeople) {
+          const cadence = p.daysOfWeek.length === 7 ? 'daily' : 'weekly';
+          await scheduleNotification(p.name, cadence, p.notificationTime || '09:00', p.daysOfWeek);
+        }
+      } catch (e) {
+        console.error('Quick add scheduling failed:', e);
+      }
+    }
+    // Highlight and scroll to the newly added people
+    const ids = newPeople.map(p => p.id);
+    setHighlightIds(ids);
+    setTimeout(() => {
+      try {
+        const root: HTMLElement | null = (PrayerManager as any)._scrollEl || null;
+        const target = document.querySelector(`[data-person-id="${ids[0]}"]`);
+        if (root && target && (target as any).scrollIntoView) {
+          (target as any).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } catch {}
+    }, 150);
+    // Remove highlight after a short delay
+    setTimeout(() => setHighlightIds([]), 2500);
+    toast({
+      title: 'People added',
+      description: hasNotificationPermission
+        ? 'Assigned days set and reminders scheduled. You can edit any details.'
+        : 'Assigned days set. Enable notifications above to schedule reminders.',
+    });
+    setStarterEditor(null);
+  };
+
+  const useExampleNames = () => {
+    if (!starterEditor) return;
+    const count = starterEditor.count;
+    const examples = Array.from({ length: count }, (_, i) => `Friend ${i + 1}`);
+    setStarterInputs(examples);
+  };
 
   const handleClose = () => {
     toast({
@@ -238,6 +319,9 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
         days.push(notification.day_of_week);
       }
     });
+    // Include locally assigned days (pre-scheduling) for immediate reflection in UI
+    const local = prayerList.find(p => p.name === personName)?.daysOfWeek || [];
+    for (const d of local) if (!days.includes(d)) days.push(d);
     
     return days.sort();
   };
@@ -317,9 +401,74 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" ref={setScrollRef}>
         <div className="p-4 space-y-4">
           
+          {/* Starter Packs */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Quick Add</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Quickly add names and we’ll auto-assign each to a day this week. You can edit details later.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[3,5,7].map(cnt => (
+                  <Button key={cnt} variant="outline" size="sm" onClick={() => openStarterEditor(cnt)}>
+                    Add {cnt} people
+                  </Button>
+                ))}
+              </div>
+              {onStartKickstart && (
+                <div className="pt-2 space-y-1">
+                  <Button
+                    type="button"
+                    onClick={onStartKickstart}
+                    className="w-full"
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Start 7‑Day Prayer Kickstart
+                  </Button>
+                  <p className="text-xs text-muted-foreground">We’ll prompt a small step each day for 7 days.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Starter Editor Dialog */}
+          <Dialog open={!!starterEditor} onOpenChange={(v) => !v && setStarterEditor(null)}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add {starterEditor?.count} people</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Quickly add names to get started. You can edit details later.</p>
+                {Array.from({ length: starterEditor?.count || 0 }).map((_, i) => (
+                  <div key={i}>
+                    <Label className="text-xs">Name {i+1}</Label>
+                    <Input
+                      value={starterInputs[i] ?? ''}
+                      onChange={(e) => {
+                        const nxt = [...starterInputs];
+                        nxt[i] = e.target.value;
+                        setStarterInputs(nxt);
+                      }}
+                      placeholder={`Person ${i+1}`}
+                    />
+                  </div>
+                ))}
+                <div className="flex items-center justify-between">
+                  <Button variant="ghost" onClick={() => setStarterEditor(null)}>Add Later</Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={useExampleNames}>Use Examples</Button>
+                    <Button onClick={confirmStarterEditor}>Add</Button>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           {/* Add New Person - Compact Form */}
           <Card>
             <CardHeader className="pb-3">
@@ -367,6 +516,9 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
                     onChange={(e) => setNewPersonTime(e.target.value)}
                     className="text-base"
                   />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    This time applies to all selected days for this person. Daily reminders use the same time every day.
+                  </p>
                 </div>
                 <div className="flex items-center gap-2 pt-6">
                   <Switch
@@ -400,12 +552,39 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
               </Card>
             ) : (
               prayerList.map((person) => (
-                <Card key={person.id} className="overflow-hidden">
+                <Card
+                  key={person.id}
+                  data-person-id={person.id}
+                  className={`overflow-hidden ${highlightIds.includes(person.id) ? 'ring-2 ring-primary/70' : ''}`}
+                >
                   <CardContent className="p-4">
                     {/* Person Header */}
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <h3 className="font-medium">{person.name}</h3>
+                        {/* Assigned Days Summary */}
+                        <div className="mt-1">
+                          {(() => {
+                            const draftDays = (person.daysOfWeek && person.daysOfWeek.length > 0) ? person.daysOfWeek : [];
+                            const liveDays = getNotificationDays(person.name);
+                            const assigned = (draftDays.length ? draftDays : liveDays).sort();
+                            if (assigned.length === 0) {
+                              return <span className="text-xs text-amber-600">No day set</span>;
+                            }
+                            return (
+                              <div className="flex flex-wrap gap-1">
+                                {assigned.map((d) => {
+                                  const meta = daysOfWeek.find(x => x.value === d);
+                                  return (
+                                    <span key={d} className="text-[10px] px-2 py-0.5 rounded-full border bg-background">
+                                      {meta?.short}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
                           {/* Time Display/Edit */}
                           {editingTimeForPerson === person.id ? (
@@ -507,6 +686,9 @@ export const PrayerManager = ({ prayerList, onUpdatePrayerList, onClose }: Praye
                               Active on: {getNotificationDays(person.name).map(d => daysOfWeek[d].full).join(', ')}
                             </p>
                           )}
+                          <p className="text-[11px] text-muted-foreground mt-2">
+                            Reminder time applies to all selected days for this person.
+                          </p>
                         </div>
                       </>
                     )}

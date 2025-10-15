@@ -1,51 +1,28 @@
-// Conditional imports to avoid resolution errors on web
-let LocalNotifications: any = null;
-let PushNotifications: any = null;
-let Capacitor: any = null;
+// Import Capacitor plugins directly (Capacitor 7 style)
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { Capacitor } from '@capacitor/core';
 
-// Initialize Capacitor from global object instead of dynamic imports
-const initializeCapacitor = async () => {
+// Check if we're on a native platform
+const isNativePlatform = () => {
   try {
-    // Check if we're in a Capacitor environment
-    const isCapacitorEnvironment = 
-      typeof window !== 'undefined' && 
-      ((window as any).Capacitor || 
-       window.location.protocol === 'capacitor:' ||
-       (window as any).webkit?.messageHandlers);
-    
-    console.log('Capacitor environment detection:', {
-      hasWindow: typeof window !== 'undefined',
-      hasCapacitor: !!(window as any)?.Capacitor,
-      protocol: window?.location?.protocol,
-      hasWebkit: !!(window as any)?.webkit?.messageHandlers,
-      isCapacitorEnvironment: !!isCapacitorEnvironment,
-      availablePlugins: (window as any)?.Capacitor?.Plugins ? Object.keys((window as any).Capacitor.Plugins) : []
-    });
-
-    if (isCapacitorEnvironment && (window as any).Capacitor) {
-      console.log('Using Capacitor global object...');
-      
-      // Use the global Capacitor object directly
-      Capacitor = (window as any).Capacitor;
-      LocalNotifications = (window as any).Capacitor.Plugins?.LocalNotifications;
-      PushNotifications = (window as any).Capacitor.Plugins?.PushNotifications;
-      
-      console.log('Capacitor modules loaded successfully:', {
-        hasCapacitor: !!Capacitor,
-        hasLocalNotifications: !!LocalNotifications,
-        hasPushNotifications: !!PushNotifications,
-        isNative: Capacitor.isNativePlatform ? Capacitor.isNativePlatform() : 'unknown',
-        platform: Capacitor.getPlatform ? Capacitor.getPlatform() : 'unknown'
-      });
-    } else {
-      console.log('Not in Capacitor environment, using web fallback');
-    }
-  } catch (error) {
-    console.log('Error initializing Capacitor, using web fallback:', error);
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
   }
 };
 
-type DailyRepeat = { repeats: true; on: { hour: number; minute: number } };
+console.log('Capacitor environment:', {
+  isNative: isNativePlatform(),
+  platform: Capacitor.getPlatform()
+});
+
+// Repeat specification supporting daily or weekly repeats
+type RepeatSpec = {
+  repeats: true;
+  on: { hour: number; minute: number; weekday?: number };
+  every?: 'day' | 'week';
+};
 
 export interface NotificationService {
   requestPermissions(): Promise<boolean>;
@@ -54,7 +31,7 @@ export interface NotificationService {
     title: string;
     body: string;
     id: number;
-    schedule?: Date | DailyRepeat;
+    schedule?: Date | RepeatSpec;
   }): Promise<void>;
   schedulePrayerReminder(personName: string, time: Date): Promise<void>;
   cancelNotification(id: number): Promise<void>;
@@ -64,11 +41,6 @@ export interface NotificationService {
 class CapacitorNotificationService implements NotificationService {
   async checkPermissions(): Promise<boolean> {
     try {
-      if (!LocalNotifications) {
-        console.log('LocalNotifications not available, falling back to web');
-        return false;
-      }
-      
       console.log('Checking local notification permissions...');
       const result = await LocalNotifications.checkPermissions();
       console.log('Current notification permissions:', result);
@@ -81,19 +53,14 @@ class CapacitorNotificationService implements NotificationService {
 
   async requestPermissions(): Promise<boolean> {
     try {
-      if (!LocalNotifications) {
-        console.log('LocalNotifications not available, falling back to web');
-        return false;
-      }
-      
       console.log('Requesting local notification permissions...');
       const result = await LocalNotifications.requestPermissions();
       console.log('Local notifications permission result:', result);
-      
+
       if (result.display === 'granted') {
         return true;
       }
-      
+
       console.log('Local notifications permission denied, status:', result.display);
       return false;
     } catch (error) {
@@ -106,14 +73,9 @@ class CapacitorNotificationService implements NotificationService {
     title: string;
     body: string;
     id: number;
-    schedule?: Date | DailyRepeat;
+    schedule?: Date | RepeatSpec;
   }): Promise<void> {
     try {
-      if (!LocalNotifications) {
-        console.log('LocalNotifications not available for scheduling');
-        return;
-      }
-      
       const scheduleOptions: any = {
         notifications: [{
           title: options.title,
@@ -122,11 +84,19 @@ class CapacitorNotificationService implements NotificationService {
           ...(options.schedule && (
             options.schedule instanceof Date
               ? { schedule: { at: options.schedule } }
-              : { schedule: { repeats: true, on: { hour: options.schedule.on.hour, minute: options.schedule.on.minute } } }
+              : { schedule: {
+                    repeats: true,
+                    ...(options.schedule.every ? { every: options.schedule.every } : {}),
+                    on: {
+                      hour: options.schedule.on.hour,
+                      minute: options.schedule.on.minute,
+                      ...(typeof options.schedule.on.weekday === 'number' ? { weekday: options.schedule.on.weekday } : {})
+                    }
+                  } }
           ))
         }]
       };
-      
+
       console.log('Scheduling notification:', scheduleOptions);
       await LocalNotifications.schedule(scheduleOptions);
       console.log('Notification scheduled successfully');
@@ -146,12 +116,6 @@ class CapacitorNotificationService implements NotificationService {
 
   async cancelNotification(id: number): Promise<void> {
     try {
-      if (!LocalNotifications) {
-        console.log('LocalNotifications not available for cancelling');
-        return;
-      }
-      
-      // Capacitor LocalNotifications expects a numeric ID
       await LocalNotifications.cancel({ notifications: [{ id }] });
       console.log('Notification cancelled:', id);
     } catch (error) {
@@ -161,15 +125,10 @@ class CapacitorNotificationService implements NotificationService {
 
   async setupPushNotifications(): Promise<void> {
     try {
-      if (!PushNotifications) {
-        console.log('PushNotifications not available');
-        return;
-      }
-      
       console.log('Setting up push notifications...');
       const result = await PushNotifications.requestPermissions();
       console.log('Push notifications permission result:', result);
-      
+
       if (result.receive === 'granted') {
         await PushNotifications.register();
         console.log('Push notifications registered successfully');
@@ -203,7 +162,7 @@ class WebNotificationService implements NotificationService {
     title: string;
     body: string;
     id: number;
-    schedule?: Date | DailyRepeat;
+    schedule?: Date | RepeatSpec;
   }): Promise<void> {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
@@ -222,19 +181,41 @@ class WebNotificationService implements NotificationService {
       return;
     }
 
-    // Best-effort daily repeat in web: schedule next fire, then 24h intervals
+    // Best-effort repeat in web
     const now = new Date();
+    const { hour, minute, weekday } = options.schedule.on;
+
+    // Compute next trigger time
     const next = new Date();
-    next.setHours(options.schedule.on.hour, options.schedule.on.minute, 0, 0);
-    if (next <= now) next.setDate(next.getDate() + 1);
-    const firstDelay = next.getTime() - now.getTime();
-    setTimeout(() => {
-      new Notification(options.title, { body: options.body });
-      // Subsequent fires approximately every 24h
-      setInterval(() => {
+    next.setSeconds(0, 0);
+    next.setHours(hour, minute, 0, 0);
+
+    if (typeof weekday === 'number') {
+      // Weekly repeat: find next specified weekday (iOS weekday 1=Sun .. 7=Sat). On web we use 0=Sun..6=Sat
+      const target = (weekday - 1 + 7) % 7; // convert 1-7 -> 0-6
+      let addDays = (target - now.getDay() + 7) % 7;
+      if (addDays === 0 && next <= now) addDays = 7;
+      next.setDate(now.getDate() + addDays);
+      const firstDelay = Math.max(0, next.getTime() - now.getTime());
+      setTimeout(() => {
         new Notification(options.title, { body: options.body });
-      }, 24 * 60 * 60 * 1000);
-    }, firstDelay);
+        // Subsequent fires every 7 days
+        setInterval(() => {
+          new Notification(options.title, { body: options.body });
+        }, 7 * 24 * 60 * 60 * 1000);
+      }, firstDelay);
+    } else {
+      // Daily repeat: schedule next fire, then 24h intervals
+      if (next <= now) next.setDate(next.getDate() + 1);
+      const firstDelay = next.getTime() - now.getTime();
+      setTimeout(() => {
+        new Notification(options.title, { body: options.body });
+        // Subsequent fires approximately every 24h
+        setInterval(() => {
+          new Notification(options.title, { body: options.body });
+        }, 24 * 60 * 60 * 1000);
+      }, firstDelay);
+    }
   }
 
   async schedulePrayerReminder(personName: string, time: Date): Promise<void> {
@@ -257,22 +238,15 @@ class WebNotificationService implements NotificationService {
 }
 
 // Create the appropriate service based on platform
-const createNotificationService = async (): Promise<NotificationService> => {
-  await initializeCapacitor();
-  
-  // Check if we successfully loaded Capacitor and we're on a native platform
-  const isNativePlatform = Capacitor && 
-    (Capacitor.isNativePlatform() || 
-     (typeof window !== 'undefined' && window.location.protocol === 'capacitor:'));
-  
+const createNotificationService = (): NotificationService => {
+  const native = isNativePlatform();
+
   console.log('Service selection:', {
-    hasCapacitor: !!Capacitor,
-    isNativePlatform: isNativePlatform,
-    capacitorPlatform: Capacitor?.getPlatform?.(),
-    protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown'
+    isNative: native,
+    platform: Capacitor.getPlatform()
   });
-  
-  if (isNativePlatform) {
+
+  if (native) {
     console.log('Using Capacitor notification service for native platform');
     return new CapacitorNotificationService();
   } else {
@@ -281,14 +255,14 @@ const createNotificationService = async (): Promise<NotificationService> => {
   }
 };
 
-// Create a promise that resolves to the service
-let notificationServicePromise: Promise<NotificationService> | null = null;
+// Create a singleton service instance
+let serviceInstance: NotificationService | null = null;
 
-const getNotificationService = async (): Promise<NotificationService> => {
-  if (!notificationServicePromise) {
-    notificationServicePromise = createNotificationService();
+const getNotificationService = (): NotificationService => {
+  if (!serviceInstance) {
+    serviceInstance = createNotificationService();
   }
-  return await notificationServicePromise;
+  return serviceInstance;
 };
 
 // Export a wrapper that handles the async initialization
@@ -305,7 +279,7 @@ export const notificationService: NotificationService = {
     title: string;
     body: string;
     id: number;
-    schedule?: Date;
+    schedule?: Date | RepeatSpec;
   }): Promise<void> {
     const service = await getNotificationService();
     return service.scheduleLocalNotification(options);

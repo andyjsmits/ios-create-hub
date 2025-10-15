@@ -73,50 +73,64 @@ export const usePrayerNotifications = () => {
 
     try {
       const [hours, minutes] = notificationTime.split(':').map(Number);
-      const now = new Date();
-      
-      // Determine which days to schedule for
-      let daysToSchedule: number[] = [];
-      if (cadence === 'daily' || !selectedDays || selectedDays.length === 7) {
-        // Schedule for all 7 days
-        daysToSchedule = [0, 1, 2, 3, 4, 5, 6];
-      } else {
-        // Use the specific selected days
-        daysToSchedule = selectedDays;
-      }
-      
-      console.log('Scheduling notifications for days:', daysToSchedule.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]));
+      const isDaily = cadence === 'daily' || !selectedDays || selectedDays.length === 7;
 
-      // Schedule notifications for each selected day
-      const scheduledNotifications: PrayerNotification[] = [];
-      
-      for (const dayOfWeek of daysToSchedule) {
-        const notificationId = Math.floor(Math.random() * 10000) + dayOfWeek;
-        
-        // Calculate the next occurrence of this day at the specified time
-        const notificationDate = new Date();
-        notificationDate.setHours(hours, minutes, 0, 0);
-        
-        // Calculate days until target day
-        const currentDay = now.getDay();
-        let daysUntilTarget = (dayOfWeek - currentDay + 7) % 7;
-        
-        // If it's the same day but time has passed, schedule for next week
-        if (daysUntilTarget === 0 && notificationDate <= now) {
-          daysUntilTarget = 7;
-        }
-        
-        notificationDate.setDate(now.getDate() + daysUntilTarget);
-        
-        console.log(`Scheduling for ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek]} at ${notificationTime}:`, notificationDate);
+      if (isDaily) {
+        // Single daily repeating notification per person
+        const notificationId = Math.floor(Math.random() * 10000) + 5000; // offset to avoid collisions
 
-        // Save to database with day_of_week column
         const { data, error } = await supabase
           .from('prayer_notifications')
           .insert({
             user_id: user.id,
             person_name: personName,
-            cadence,
+            cadence: 'daily',
+            notification_time: notificationTime,
+            notification_id: notificationId,
+            is_active: true,
+            day_of_week: null
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Database error (daily):', error);
+          toast({
+            title: 'Database Error',
+            description: `Failed to save daily notification: ${error.message}`,
+            variant: 'destructive'
+          });
+        } else {
+          await notificationService.scheduleLocalNotification({
+            title: 'PULSE Prayer Reminder',
+            body: `Time to pray for ${personName}`,
+            id: notificationId,
+            schedule: { repeats: true, every: 'day', on: { hour: hours, minute: minutes } }
+          });
+
+          setNotifications(prev => [...prev, data as PrayerNotification]);
+          toast({
+            title: 'Daily reminder scheduled',
+            description: `${personName}: every day at ${notificationTime}`
+          });
+        }
+        return;
+      }
+
+      // Weekly scheduling for selected days
+      const daysToSchedule: number[] = (selectedDays ?? []).slice();
+      console.log('Scheduling notifications for days:', daysToSchedule.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]));
+
+      const scheduledNotifications: PrayerNotification[] = [];
+      for (const dayOfWeek of daysToSchedule) {
+        const notificationId = Math.floor(Math.random() * 10000) + dayOfWeek;
+
+        const { data, error } = await supabase
+          .from('prayer_notifications')
+          .insert({
+            user_id: user.id,
+            person_name: personName,
+            cadence: 'weekly',
             notification_time: notificationTime,
             notification_id: notificationId,
             is_active: true,
@@ -135,21 +149,21 @@ export const usePrayerNotifications = () => {
           continue;
         }
 
-        // Schedule with notification service
-        await notificationService.schedulePrayerReminder(
-          `${personName} (${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek]})`, 
-          notificationDate
-        );
-        
+        const iosWeekday = ((dayOfWeek + 1 - 1 + 7) % 7) + 1;
+        await notificationService.scheduleLocalNotification({
+          title: 'PULSE Prayer Reminder',
+          body: `Time to pray for ${personName} (${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek]})`,
+          id: notificationId,
+          schedule: { repeats: true, every: 'week', on: { hour: hours, minute: minutes, weekday: iosWeekday } }
+        });
         scheduledNotifications.push(data as PrayerNotification);
       }
-      
+
       setNotifications(prev => [...prev, ...scheduledNotifications]);
-      
-      const dayNames = daysToSchedule.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]);
+      const dayNames = (selectedDays || []).map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]);
       toast({
-        title: 'Notifications scheduled',
-        description: `Prayer reminders set for ${personName} on ${dayNames.join(', ')}`
+        title: 'Weekly reminders scheduled',
+        description: `${personName}: ${dayNames.join(', ')} at ${notificationTime}`
       });
     } catch (error) {
       console.error('Error scheduling notification:', error);

@@ -26,12 +26,6 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    rollupOptions: {
-      external: [
-        '@capacitor/core',
-        '@capacitor/app',
-        '@capacitor-community/apple-sign-in'
-      ]
-    }
+    // Ensure Capacitor packages are bundled for iOS WebView
   }
 }));
